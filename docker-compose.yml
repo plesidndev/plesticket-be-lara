@@ -1,0 +1,40 @@
+services:
+  app:
+    build: .
+    container_name: plesticket-lara-app
+    ports:
+      - "8081:8080"
+    environment:
+      - APP_NAME=Plesticket
+      - APP_ENV=production
+      - APP_KEY=${APP_KEY}
+      - APP_DEBUG=false
+      - DB_CONNECTION=pgsql
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_DATABASE=plesticket_db
+      - DB_USERNAME=bayuyuhartono
+      - DB_PASSWORD=protrek123
+      - JWT_SECRET=${JWT_SECRET}
+      - CACHE_STORE=array
+      - SESSION_DRIVER=array
+      - QUEUE_CONNECTION=sync
+    depends_on:
+      - postgres
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:15
+    container_name: plesticket-lara-postgres
+    environment:
+      - POSTGRES_USER=bayuyuhartono
+      - POSTGRES_PASSWORD=protrek123
+      - POSTGRES_DB=plesticket_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_lara_data:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  postgres_lara_data:
