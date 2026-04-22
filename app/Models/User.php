@@ -15,8 +15,11 @@ class User extends Authenticatable implements JWTSubject
     protected $fillable = [
         'uid',
         'name',
+        'username',
         'email',
         'phone',
+        'date_of_birth',
+        'photo',
         'password',
         'role',
         'is_active',
@@ -30,9 +33,10 @@ class User extends Authenticatable implements JWTSubject
     protected function casts(): array
     {
         return [
-            'password'  => 'hashed',
-            'role'      => UserRole::class,
-            'is_active' => 'boolean',
+            'password'      => 'hashed',
+            'role'          => UserRole::class,
+            'is_active'     => 'boolean',
+            'date_of_birth' => 'date',
         ];
     }
 

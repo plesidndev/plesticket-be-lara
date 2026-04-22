@@ -46,6 +46,10 @@ return [
             'driver'   => 'jwt',
             'provider' => 'users',
         ],
+        'organizer' => [
+            'driver'   => 'jwt',
+            'provider' => 'organizer_members',
+        ],
     ],
 
     /*
@@ -68,7 +72,11 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model' => env('AUTH_MODEL', User::class),
+            'model'  => env('AUTH_MODEL', User::class),
+        ],
+        'organizer_members' => [
+            'driver' => 'eloquent',
+            'model'  => \App\Models\OrganizerMember::class,
         ],
 
         // 'users' => [

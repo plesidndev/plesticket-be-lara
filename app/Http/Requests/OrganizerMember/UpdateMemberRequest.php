@@ -1,12 +1,14 @@
 <?php
 
-namespace App\Http\Requests\Auth;
+namespace App\Http\Requests\OrganizerMember;
 
+use App\Enums\OrganizerRole;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rules\Enum;
 
-class RegisterRequest extends FormRequest
+class UpdateMemberRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -16,12 +18,11 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'          => ['required', 'string', 'max:255'],
-            'username'      => ['required', 'string', 'max:50', 'alpha_dash', 'unique:users,username'],
-            'email'         => ['required', 'email', 'unique:users,email'],
-            'password'      => ['required', 'string', 'min:8'],
-            'phone'         => ['nullable', 'string', 'max:20'],
-            'date_of_birth' => ['required', 'date', 'date_format:Y-m-d', 'before:today'],
+            'name'      => ['sometimes', 'string', 'max:255'],
+            'email'     => ['sometimes', 'nullable', 'email', 'max:100'],
+            'password'  => ['sometimes', 'string', 'min:8'],
+            'role'      => ['sometimes', new Enum(OrganizerRole::class)],
+            'is_active' => ['sometimes', 'boolean'],
         ];
     }
 

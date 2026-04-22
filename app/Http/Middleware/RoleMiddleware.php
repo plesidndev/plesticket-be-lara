@@ -13,9 +13,17 @@ class RoleMiddleware
 
     public function handle(Request $request, Closure $next, string ...$roles): Response
     {
-        $user = auth('api')->user();
+        // Check platform guard first, then organizer guard
+        $user = auth('api')->user() ?? auth('organizer')->user();
 
-        if (! $user || ! in_array($user->role->value, $roles, true)) {
+        if (! $user) {
+            return response()->json([
+                'status'  => 'error',
+                'message' => 'Unauthenticated.',
+            ], 401);
+        }
+
+        if (! in_array($user->role->value, $roles, true)) {
             return response()->json([
                 'status'  => 'error',
                 'message' => 'Insufficient permissions.',

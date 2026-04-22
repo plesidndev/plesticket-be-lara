@@ -10,10 +10,10 @@
 ## Project Structure
 ```
 /app
-  /Enums            - PHP 8.1 backed enums (UserRole)
+  /Enums            - UserRole, OrganizerRole
   /Http
     /Controllers/Api - API controllers (no web controllers)
-    /Middleware      - RoleMiddleware
+    /Middleware      - RoleMiddleware, Authenticate
     /Requests        - Form request validation classes (per domain/action)
     /Resources       - API resource transformers
   /Models            - Eloquent models
@@ -24,14 +24,14 @@
   /Services          - Business logic (coordinates repos, throws exceptions)
   /Traits            - ApiResponse (shared JSON helpers)
 /bootstrap
-  app.php            - Application bootstrap (routes, middleware aliases registered here)
+  app.php            - Application bootstrap (routes, middleware, exception handlers)
   providers.php      - Service providers list
 /database
   /migrations        - Laravel migration files
-  /seeders           - Province + City seeders
+  /seeders           - SuperAdmin + Province + City seeders
 /docker              - nginx.conf, supervisord.conf
 /routes
-  api.php            - All API routes (no routes/web.php used for API)
+  api.php            - All API routes (no routes/web.php)
 ```
 
 ## Architecture Pattern
@@ -46,29 +46,63 @@ Every domain follows: `Model` → `RepositoryInterface` → `Repository` → `Se
 
 ## Authentication & Roles
 
-### Platform roles (PHP enum `App\Enums\UserRole`)
+### Two separate auth systems
+
+| | Platform | Organizer |
+|---|---|---|
+| Login endpoint | `POST /api/auth/login` | `POST /api/organizer-auth/login` |
+| Guard | `auth:api` | `auth:organizer` |
+| Credentials | `email` + `password` | `uid` + `password` |
+| Model | `User` | `OrganizerMember` |
+
+### Platform roles (`App\Enums\UserRole`) — stored in `users.role`
 ```php
-UserRole::SuperAdmin      // 'SUPER_ADMIN'
-UserRole::EventOrganizer  // 'EVENT_ORGANIZER'
-UserRole::RegisteredUser  // 'REGISTERED_USER'
+UserRole::SuperAdmin     // 'SUPER_ADMIN'      full platform access
+UserRole::RegisteredUser // 'REGISTERED_USER'  creates events, manages organizer members
 ```
 
-Organizer-scoped roles (`EO_STAFF`, `GATE_OFFICER`, `MITRA_TICKET_BOX`, `BAND`, `MEDIA`, `SPONSOR`) — reserved in JWT, implemented later via `organizer_members` table.
+### Organizer roles (`App\Enums\OrganizerRole`) — stored in `organizer_members.role`
+```php
+OrganizerRole::EoStaff        // 'EO_STAFF'
+OrganizerRole::GateOfficer    // 'GATE_OFFICER'
+OrganizerRole::MitraTicketBox // 'MITRA_TICKET_BOX'
+OrganizerRole::Band           // 'BAND'
+OrganizerRole::Media          // 'MEDIA'
+OrganizerRole::Sponsor        // 'SPONSOR'
+```
 
-### JWT Claims (`getJWTCustomClaims` on User model)
-`uid`, `name`, `email`, `role`
+### User flow
+1. User registers → `REGISTERED_USER`
+2. User creates an event
+3. `SUPER_ADMIN` verifies the event
+4. Verified event owner adds organizer members via API (with name, password, role)
+5. Organizer members login at `POST /api/organizer-auth/login` using `uid` + `password`
+6. Organizer member JWT carries: `uid`, `name`, `role`, `event_id`, `guard: organizer`
 
-### Token flow
+### Organizer member UID format
+- Current: `OM{id:04d}` (e.g. `OM0001`)
+- Future (after events domain): `{event_id}-{sequence:04d}` (e.g. `PRFKLK02399-0001`)
+
+### JWT Claims
+**Platform (`User` model):** `uid`, `name`, `email`, `role`
+**Organizer (`OrganizerMember` model):** `uid`, `name`, `role`, `event_id`, `guard`
+
+### Token flow — Platform
 - `POST /api/auth/register` → creates `REGISTERED_USER`, returns `{ token, user }`
 - `POST /api/auth/login`    → returns `{ token, user }`
 - `GET  /api/auth/me`       → requires `auth:api`
 - `POST /api/auth/logout`   → requires `auth:api`
 
+### Token flow — Organizer
+- `POST /api/organizer-auth/login`  → returns `{ token, member }`
+- `GET  /api/organizer-auth/me`     → requires `auth:organizer`
+- `POST /api/organizer-auth/logout` → requires `auth:organizer`
+
 ### Protecting routes
 ```php
 Route::middleware('auth:api')->group(fn() => ...);
+Route::middleware('auth:organizer')->group(fn() => ...);
 Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->group(fn() => ...);
-Route::middleware(['auth:api', 'role:SUPER_ADMIN,EVENT_ORGANIZER'])->group(fn() => ...);
 ```
 
 ## Environment Variables
@@ -85,12 +119,15 @@ CACHE_STORE, SESSION_DRIVER, QUEUE_CONNECTION
 - `0001_01_01_000002` — jobs
 - `2026_04_21_000001` — provinces (id, code, name)
 - `2026_04_21_000002` — cities (id, province_code FK, name, type KABUPATEN|KOTA)
+- `2026_04_21_000003` — organizer_members initial (superseded by 000004)
+- `2026_04_21_000004` — organizer_members (id, uid, owner_id FK, event_id nullable, name, email, password, role, is_active)
 
-Latest migration: `2026_04_21_000002_create_cities_table`
+Latest migration: `2026_04_21_000004_redesign_organizer_members_table`
 
 ## Seeders
 ```bash
-php artisan db:seed              # runs ProvinceSeeder + CitySeeder
+php artisan db:seed                          # runs all seeders
+php artisan db:seed --class=SuperAdminSeeder # superadmin@plesticket.com / adminpass
 php artisan db:seed --class=ProvinceSeeder
 php artisan db:seed --class=CitySeeder
 ```
@@ -115,6 +152,7 @@ JSON shape:
 All interface→implementation bindings are in `RepositoryServiceProvider`:
 ```php
 $this->app->bind(UserRepositoryInterface::class, UserRepository::class);
+$this->app->bind(OrganizerMemberRepositoryInterface::class, OrganizerMemberRepository::class);
 ```
 Register new bindings there — never in `AppServiceProvider`.
 

@@ -14,7 +14,7 @@ services:
       - DB_PORT=5432
       - DB_DATABASE=plesticket_db
       - DB_USERNAME=bayuyuhartono
-      - DB_PASSWORD=protrek123
+      - DB_PASSWORD=plesticket123
       - JWT_SECRET=${JWT_SECRET}
       - CACHE_STORE=array
       - SESSION_DRIVER=array
@@ -28,7 +28,7 @@ services:
     container_name: plesticket-lara-postgres
     environment:
       - POSTGRES_USER=bayuyuhartono
-      - POSTGRES_PASSWORD=protrek123
+      - POSTGRES_PASSWORD=plesticket123
       - POSTGRES_DB=plesticket_db
     ports:
       - "5433:5432"

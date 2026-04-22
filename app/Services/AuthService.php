@@ -16,12 +16,14 @@ class AuthService
     public function register(array $data): array
     {
         $user = $this->users->create([
-            'name'      => $data['name'],
-            'email'     => strtolower(trim($data['email'])),
-            'phone'     => $data['phone'] ?? null,
-            'password'  => $data['password'],
-            'role'      => UserRole::RegisteredUser,
-            'is_active' => true,
+            'name'          => $data['name'],
+            'username'      => $data['username'],
+            'email'         => strtolower(trim($data['email'])),
+            'phone'         => $data['phone'] ?? null,
+            'date_of_birth' => $data['date_of_birth'],
+            'password'      => $data['password'],
+            'role'          => UserRole::RegisteredUser,
+            'is_active'     => true,
         ]);
 
         $token = JWTAuth::fromUser($user);

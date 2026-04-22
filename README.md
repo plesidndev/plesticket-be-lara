@@ -1,58 +1,114 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Plesticket Backend
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+REST API backend for the Plesticket ticketing platform, built with Laravel 13 and PHP 8.3.
 
-## About Laravel
+## Tech Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Language:** PHP 8.3
+- **Framework:** Laravel 13
+- **Database:** PostgreSQL
+- **Auth:** JWT via `tymon/jwt-auth` v2.3
+- **Container:** Docker (nginx + php-fpm + supervisord)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Requirements
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- Docker & Docker Compose
+- PHP 8.3 + Composer (for local development without Docker)
 
-## Learning Laravel
+## Getting Started
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
-
-In addition, [Laracasts](https://laracasts.com) contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
-
-You can also watch bite-sized lessons with real-world projects on [Laravel Learn](https://laravel.com/learn), where you will be guided through building a Laravel application from scratch while learning PHP fundamentals.
-
-## Agentic Development
-
-Laravel's predictable structure and conventions make it ideal for AI coding agents like Claude Code, Cursor, and GitHub Copilot. Install [Laravel Boost](https://laravel.com/docs/ai) to supercharge your AI workflow:
+### With Docker
 
 ```bash
-composer require laravel/boost --dev
+# Build and start containers (API available at http://localhost:8081)
+docker-compose up --build
 
-php artisan boost:install
+# Run migrations and seeders
+docker exec plesticket-lara-app php artisan migrate --seed
 ```
 
-Boost provides your agent 15+ tools and skills that help agents build Laravel applications while following best practices.
+### Local Development
 
-## Contributing
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan jwt:secret
+php artisan migrate --seed
+php artisan serve
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Environment Variables
 
-## Code of Conduct
+```env
+APP_NAME=Plesticket
+APP_ENV=local
+APP_KEY=
+APP_DEBUG=true
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+DB_CONNECTION=pgsql
+DB_HOST=127.0.0.1
+DB_PORT=5432
+DB_DATABASE=plesticket
+DB_USERNAME=postgres
+DB_PASSWORD=
 
-## Security Vulnerabilities
+JWT_SECRET=
+JWT_TTL=60
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## API Overview
+
+### Auth
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/auth/register` | — | Register as `REGISTERED_USER` |
+| POST | `/api/auth/login` | — | Login, returns JWT |
+| GET | `/api/auth/me` | JWT | Get current user |
+| POST | `/api/auth/logout` | JWT | Invalidate token |
+
+### Roles
+
+| Role | Value |
+|------|-------|
+| Super Admin | `SUPER_ADMIN` |
+| Event Organizer | `EVENT_ORGANIZER` |
+| Registered User | `REGISTERED_USER` |
+
+## Response Format
+
+```json
+{ "status": "success", "message": "...", "data": {} }
+{ "status": "success", "message": "...", "data": [], "meta": { "total": 0, "page": 1, "limit": 10, "pages": 0 } }
+{ "status": "error",   "message": "...", "errors": {} }
+```
+
+## Project Structure
+
+```
+app/
+  Enums/                  - PHP backed enums (UserRole)
+  Http/
+    Controllers/Api/      - API controllers
+    Middleware/           - RoleMiddleware
+    Requests/             - Form request validation
+    Resources/            - API resource transformers
+  Models/                 - Eloquent models
+  Providers/              - AppServiceProvider, RepositoryServiceProvider
+  Repositories/
+    Contracts/            - Repository interfaces
+    *.php                 - Eloquent implementations
+  Services/               - Business logic
+  Traits/                 - ApiResponse
+database/
+  migrations/
+  seeders/                - Province + City seeders
+docker/                   - nginx.conf, supervisord.conf
+routes/
+  api.php
+```
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Proprietary — All rights reserved.

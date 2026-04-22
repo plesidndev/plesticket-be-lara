@@ -1,0 +1,581 @@
+{
+  "info": {
+    "name": "Plesticket API",
+    "_postman_id": "plesticket-api-v1",
+    "description": "Plesticket Backend API Contract",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8081/api",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string",
+      "description": "Platform JWT (REGISTERED_USER or SUPER_ADMIN)"
+    },
+    {
+      "key": "organizer_token",
+      "value": "",
+      "type": "string",
+      "description": "Organizer member JWT (EO_STAFF, GATE_OFFICER, etc.)"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/health", "host": ["{{base_url}}"], "path": ["health"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Platform Auth",
+      "description": "Auth for REGISTERED_USER and SUPER_ADMIN",
+      "item": [
+        {
+          "name": "Register",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/register", "host": ["{{base_url}}"], "path": ["auth", "register"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Doe\",\n  \"username\": \"johndoe\",\n  \"email\": \"john@example.com\",\n  \"password\": \"password123\",\n  \"phone\": \"08123456789\",\n  \"date_of_birth\": \"1995-08-21\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.token) {",
+                  "  pm.collectionVariables.set('token', res.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/auth/login", "host": ["{{base_url}}"], "path": ["auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"superadmin@plesticket.com\",\n  \"password\": \"adminpass\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/auth/me", "host": ["{{base_url}}"], "path": ["auth", "me"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/auth/logout", "host": ["{{base_url}}"], "path": ["auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Organizer Auth",
+      "description": "Auth for organizer members (EO_STAFF, GATE_OFFICER, MITRA_TICKET_BOX, BAND, MEDIA, SPONSOR). Login using uid + password.",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const res = pm.response.json();",
+                  "if (res.data && res.data.token) {",
+                  "  pm.collectionVariables.set('organizer_token', res.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/organizer-auth/login", "host": ["{{base_url}}"], "path": ["organizer-auth", "login"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"uid\": \"OM0001\",\n  \"password\": \"password123\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{organizer_token}}", "type": "string" }]
+            },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/organizer-auth/me", "host": ["{{base_url}}"], "path": ["organizer-auth", "me"] }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [{ "key": "token", "value": "{{organizer_token}}", "type": "string" }]
+            },
+            "method": "POST",
+            "url": { "raw": "{{base_url}}/organizer-auth/logout", "host": ["{{base_url}}"], "path": ["organizer-auth", "logout"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "description": "Requires platform auth ({{token}})",
+      "item": [
+        {
+          "name": "Upload Photo",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/profile/photo",
+              "host": ["{{base_url}}"],
+              "path": ["profile", "photo"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photo",
+                  "type": "file",
+                  "description": "Image file: jpg, jpeg, png, webp. Max 2MB."
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Provinces",
+      "item": [
+        {
+          "name": "List Provinces",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/provinces?search=&limit=15&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["provinces"],
+              "query": [
+                { "key": "search", "value": "", "description": "Search by name" },
+                { "key": "limit", "value": "15" },
+                { "key": "page", "value": "1" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Cities",
+      "item": [
+        {
+          "name": "List Cities",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/cities?province_code=&search=&limit=15&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["cities"],
+              "query": [
+                { "key": "province_code", "value": "", "description": "Filter by province code" },
+                { "key": "search", "value": "", "description": "Search by name" },
+                { "key": "limit", "value": "15" },
+                { "key": "page", "value": "1" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users",
+      "description": "Requires SUPER_ADMIN role. Uses {{token}}.",
+      "item": [
+        {
+          "name": "List Users",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users?role=&is_active=&search=&limit=15&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["users"],
+              "query": [
+                { "key": "role", "value": "", "description": "SUPER_ADMIN | REGISTERED_USER" },
+                { "key": "is_active", "value": "", "description": "true | false" },
+                { "key": "search", "value": "", "description": "Search by name or email" },
+                { "key": "limit", "value": "15" },
+                { "key": "page", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get User",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/users/:uid",
+              "host": ["{{base_url}}"],
+              "path": ["users", ":uid"],
+              "variable": [{ "key": "uid", "value": "SA0001" }]
+            }
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/users/:uid",
+              "host": ["{{base_url}}"],
+              "path": ["users", ":uid"],
+              "variable": [{ "key": "uid", "value": "U000001" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"John Updated\",\n  \"phone\": \"08129999999\",\n  \"role\": \"REGISTERED_USER\",\n  \"is_active\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "role: SUPER_ADMIN | REGISTERED_USER"
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/users/:uid",
+              "host": ["{{base_url}}"],
+              "path": ["users", ":uid"],
+              "variable": [{ "key": "uid", "value": "U000001" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Organizer Members",
+      "description": "Requires REGISTERED_USER auth ({{token}}). Scoped per event — event must be verified and owned by the authenticated user.",
+      "item": [
+        {
+          "name": "List Members",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/events/:eventId/members?limit=15&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["events", ":eventId", "members"],
+              "variable": [{ "key": "eventId", "value": "", "description": "Event UUID (id)" }],
+              "query": [
+                { "key": "limit", "value": "15" },
+                { "key": "page", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add Member",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/events/:eventId/members",
+              "host": ["{{base_url}}"],
+              "path": ["events", ":eventId", "members"],
+              "variable": [{ "key": "eventId", "value": "", "description": "Event UUID (id)" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Gate Staff 1\",\n  \"email\": \"gate1@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"GATE_OFFICER\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "role: EO_STAFF | GATE_OFFICER | MITRA_TICKET_BOX | BAND | MEDIA | SPONSOR"
+          }
+        },
+        {
+          "name": "Update Member",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/events/:eventId/members/:memberId",
+              "host": ["{{base_url}}"],
+              "path": ["events", ":eventId", "members", ":memberId"],
+              "variable": [
+                { "key": "eventId", "value": "", "description": "Event UUID (id)" },
+                { "key": "memberId", "value": "1" }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Gate Staff Updated\",\n  \"role\": \"EO_STAFF\",\n  \"is_active\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Remove Member",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/events/:eventId/members/:memberId",
+              "host": ["{{base_url}}"],
+              "path": ["events", ":eventId", "members", ":memberId"],
+              "variable": [
+                { "key": "eventId", "value": "", "description": "Event UUID (id)" },
+                { "key": "memberId", "value": "1" }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Banks",
+      "description": "Public — no auth required",
+      "item": [
+        {
+          "name": "List Banks",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": { "raw": "{{base_url}}/banks", "host": ["{{base_url}}"], "path": ["banks"] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Events — Public",
+      "description": "No auth required",
+      "item": [
+        {
+          "name": "List Events",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/events?search=&category=&city=&is_online=&limit=15&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["events"],
+              "query": [
+                { "key": "search", "value": "", "description": "Search by title" },
+                { "key": "category", "value": "", "description": "Filter by category" },
+                { "key": "city", "value": "", "description": "Filter by city" },
+                { "key": "is_online", "value": "", "description": "true | false" },
+                { "key": "limit", "value": "15" },
+                { "key": "page", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Event by Slug",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/events/:slug",
+              "host": ["{{base_url}}"],
+              "path": ["events", ":slug"],
+              "variable": [{ "key": "slug", "value": "my-event-title" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Events — My Events",
+      "description": "Requires REGISTERED_USER auth ({{token}})",
+      "item": [
+        {
+          "name": "My Events",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/events/my?limit=15&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["events", "my"],
+              "query": [
+                { "key": "limit", "value": "15" },
+                { "key": "page", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Create Event",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": { "raw": "{{base_url}}/events", "host": ["{{base_url}}"], "path": ["events"] },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My Awesome Concert\",\n  \"slug\": \"my-awesome-concert\",\n  \"description\": \"An amazing event you don't want to miss.\",\n  \"category\": \"Music\",\n  \"banner_url\": \"https://example.com/banner.jpg\",\n\n  \"pic_name\": \"Budi Santoso\",\n  \"pic_identity_type\": \"KTP\",\n  \"pic_identity_number\": \"3271234567890001\",\n  \"pic_npwp\": \"12.345.678.9-012.345\",\n\n  \"start_date\": \"2026-06-01\",\n  \"end_date\": \"2026-06-01\",\n  \"start_time\": \"19:00\",\n  \"end_time\": \"23:00\",\n\n  \"is_online\": false,\n  \"venue_name\": \"Gelora Bung Karno\",\n  \"address\": \"Jl. Pintu Satu Senayan\",\n  \"city\": \"Jakarta Pusat\",\n  \"province\": \"DKI Jakarta\",\n\n  \"show_status\": true\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "description": "pic_identity_type: KTP | SIM | PASSPORT"
+          }
+        },
+        {
+          "name": "Update Event",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/events/:id",
+              "host": ["{{base_url}}"],
+              "path": ["events", ":id"],
+              "variable": [{ "key": "id", "value": "" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"My Awesome Concert Updated\",\n  \"description\": \"Updated description.\",\n  \"start_date\": \"2026-06-15\",\n  \"end_date\": \"2026-06-15\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Delete Event",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{base_url}}/events/:id",
+              "host": ["{{base_url}}"],
+              "path": ["events", ":id"],
+              "variable": [{ "key": "id", "value": "" }]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Events — Admin",
+      "description": "Requires SUPER_ADMIN role ({{token}})",
+      "item": [
+        {
+          "name": "List All Events",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/events?verification_status=&search=&limit=15&page=1",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "events"],
+              "query": [
+                { "key": "verification_status", "value": "", "description": "pending | verified | rejected | suspended" },
+                { "key": "search", "value": "" },
+                { "key": "limit", "value": "15" },
+                { "key": "page", "value": "1" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Event",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/admin/events/:id",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "events", ":id"],
+              "variable": [{ "key": "id", "value": "" }]
+            }
+          }
+        },
+        {
+          "name": "Verify Event",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/admin/events/:id/verify",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "events", ":id", "verify"],
+              "variable": [{ "key": "id", "value": "" }]
+            }
+          }
+        },
+        {
+          "name": "Reject Event",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "url": {
+              "raw": "{{base_url}}/admin/events/:id/reject",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "events", ":id", "reject"],
+              "variable": [{ "key": "id", "value": "" }]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Incomplete documentation provided.\"\n}",
+              "options": { "raw": { "language": "json" } }
+            }
+          }
+        },
+        {
+          "name": "Suspend Event",
+          "request": {
+            "method": "POST",
+            "url": {
+              "raw": "{{base_url}}/admin/events/:id/suspend",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "events", ":id", "suspend"],
+              "variable": [{ "key": "id", "value": "" }]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
