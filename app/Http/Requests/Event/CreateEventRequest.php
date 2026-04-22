@@ -43,9 +43,21 @@ class CreateEventRequest extends FormRequest
             'address'     => ['nullable', 'string'],
             'city'        => ['nullable', 'string', 'max:100'],
             'province'    => ['nullable', 'string', 'max:100'],
+            'latitude'    => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude'   => ['nullable', 'numeric', 'between:-180,180'],
 
             // Visibility
             'show_status' => ['sometimes', 'boolean'],
+
+            // Ticket types
+            'ticket_types'               => ['sometimes', 'array'],
+            'ticket_types.*.name'        => ['required', 'string', 'max:100'],
+            'ticket_types.*.description' => ['nullable', 'string'],
+            'ticket_types.*.price'       => ['required', 'numeric', 'min:0'],
+            'ticket_types.*.quota'       => ['required', 'integer', 'min:1'],
+            'ticket_types.*.is_active'   => ['sometimes', 'boolean'],
+            'ticket_types.*.sale_start'  => ['nullable', 'date'],
+            'ticket_types.*.sale_end'    => ['nullable', 'date', 'after_or_equal:ticket_types.*.sale_start'],
         ];
     }
 

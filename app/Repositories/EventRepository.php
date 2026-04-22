@@ -57,19 +57,20 @@ class EventRepository implements EventRepositoryInterface
 
     public function paginateByUser(int $userId, int $perPage): LengthAwarePaginator
     {
-        return Event::where('user_id', $userId)
+        return Event::with('ticketTypes')
+            ->where('user_id', $userId)
             ->orderByDesc('created_at')
             ->paginate($perPage);
     }
 
     public function findById(string $id): ?Event
     {
-        return Event::with(['user', 'verifiedBy'])->find($id);
+        return Event::with(['user', 'verifiedBy', 'ticketTypes'])->find($id);
     }
 
     public function findBySlug(string $slug): ?Event
     {
-        return Event::with('user')
+        return Event::with(['user', 'ticketTypes'])
             ->where('slug', $slug)
             ->where('verification_status', 'verified')
             ->where('show_status', true)

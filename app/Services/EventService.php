@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\VerificationStatus;
 use App\Models\Event;
 use App\Repositories\Contracts\EventRepositoryInterface;
+use App\Repositories\Contracts\TicketTypeRepositoryInterface;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
@@ -14,6 +15,7 @@ class EventService
 {
     public function __construct(
         private readonly EventRepositoryInterface $events,
+        private readonly TicketTypeRepositoryInterface $ticketTypes,
     ) {}
 
     public function listPublic(int $perPage, array $filters = []): LengthAwarePaginator
@@ -55,11 +57,20 @@ class EventService
 
     public function create(int $userId, array $data): Event
     {
-        $data['slug']    = $this->generateUniqueSlug($data['title'], $data['slug'] ?? null);
-        $data['user_id'] = $userId;
+        $ticketTypes = $data['ticket_types'] ?? [];
+        unset($data['ticket_types']);
+
+        $data['slug']                = $this->generateUniqueSlug($data['title'], $data['slug'] ?? null);
+        $data['user_id']             = $userId;
         $data['verification_status'] = VerificationStatus::Pending;
 
-        return $this->events->create($data);
+        $event = $this->events->create($data);
+
+        if (!empty($ticketTypes)) {
+            $this->ticketTypes->createForEvent($event->id, $ticketTypes);
+        }
+
+        return $this->events->findById($event->id);
     }
 
     public function update(string $id, int $userId, array $data): Event
@@ -74,6 +85,9 @@ class EventService
             throw new InvalidArgumentException('Verified events cannot be edited. Contact support.');
         }
 
+        $ticketTypes = $data['ticket_types'] ?? null;
+        unset($data['ticket_types']);
+
         if (isset($data['title']) || isset($data['slug'])) {
             $newSlug = isset($data['slug'])
                 ? Str::slug($data['slug'])
@@ -82,7 +96,13 @@ class EventService
             $data['slug'] = $this->generateUniqueSlug($data['title'] ?? $event->title, $newSlug, $id);
         }
 
-        return $this->events->update($event, $data);
+        $updated = $this->events->update($event, $data);
+
+        if ($ticketTypes !== null) {
+            $this->ticketTypes->syncForEvent($event->id, $ticketTypes);
+        }
+
+        return $this->events->findById($updated->id);
     }
 
     public function verify(string $id, int $adminId): Event
@@ -123,7 +143,7 @@ class EventService
         ]);
     }
 
-    public function delete(string $id, int $userId): void
+    public function toggleActive(string $id, int $userId): Event
     {
         $event = $this->findById($id);
 
@@ -131,7 +151,7 @@ class EventService
             throw new RuntimeException('Event not found.');
         }
 
-        $this->events->delete($event);
+        return $this->events->update($event, ['is_published' => ! $event->is_published]);
     }
 
     private function generateUniqueSlug(string $title, ?string $customSlug, ?string $excludeId = null): string

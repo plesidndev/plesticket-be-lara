@@ -11,6 +11,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             SuperAdminSeeder::class,
             BankSeeder::class,
+            CategorySeeder::class,
             ProvinceSeeder::class,
             CitySeeder::class,
         ]);

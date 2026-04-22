@@ -4,6 +4,7 @@ namespace App\Http\Resources;
 
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
+use App\Http\Resources\TicketTypeResource;
 
 class EventResource extends JsonResource
 {
@@ -43,6 +44,8 @@ class EventResource extends JsonResource
                 'address'    => $this->address,
                 'city'       => $this->city,
                 'province'   => $this->province,
+                'latitude'   => $this->latitude,
+                'longitude'  => $this->longitude,
             ],
 
             'verification_status' => $this->verification_status->value,
@@ -52,6 +55,8 @@ class EventResource extends JsonResource
             'show_status'         => $this->show_status,
             'is_published'        => $this->is_published,
             'created_at'          => $this->created_at,
+
+            'ticket_types' => TicketTypeResource::collection($this->whenLoaded('ticketTypes')),
 
             'organizer'   => new UserResource($this->whenLoaded('user')),
             'verified_by' => $isAdmin ? new UserResource($this->whenLoaded('verifiedBy')) : null,

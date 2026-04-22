@@ -75,16 +75,18 @@ class EventController extends Controller
         return $this->success('Event updated.', new EventResource($event));
     }
 
-    // REGISTERED_USER — delete own event
-    public function destroy(string $id): JsonResponse
+    // REGISTERED_USER — toggle active/inactive
+    public function toggleActive(string $id): JsonResponse
     {
         try {
-            $this->service->delete($id, auth('api')->id());
+            $event = $this->service->toggleActive($id, auth('api')->id());
         } catch (RuntimeException $e) {
             return $this->error($e->getMessage(), 404);
         }
 
-        return $this->success('Event deleted.');
+        $label = $event->is_published ? 'activated' : 'deactivated';
+
+        return $this->success("Event {$label}.", new EventResource($event));
     }
 
     // SUPER_ADMIN — list all events

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BankController;
+use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CityController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\OrganizerAuthController;
@@ -39,9 +40,18 @@ Route::prefix('organizer-auth')->group(function () {
     });
 });
 
-Route::get('/provinces', [ProvinceController::class, 'index']);
-Route::get('/cities',    [CityController::class, 'index']);
-Route::get('/banks',     [BankController::class, 'index']);
+Route::get('/provinces',  [ProvinceController::class, 'index']);
+Route::get('/cities',     [CityController::class, 'index']);
+Route::get('/banks',      [BankController::class, 'index']);
+Route::get('/categories', [CategoryController::class, 'index']);
+
+// Categories — Super Admin CRUD
+Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('admin')->group(function () {
+    Route::get('/categories',       [CategoryController::class, 'adminIndex']);
+    Route::post('/categories',      [CategoryController::class, 'store']);
+    Route::put('/categories/{id}',  [CategoryController::class, 'update']);
+    Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
+});
 
 
 // User management — Super Admin only
@@ -53,16 +63,18 @@ Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('users')->group(func
 });
 
 // Events — public
-Route::get('/events',        [EventController::class, 'index']);
-Route::get('/events/{slug}', [EventController::class, 'showBySlug']);
+Route::get('/events', [EventController::class, 'index']);
 
-// Events — authenticated user
+// Events — authenticated user (must be before /{slug} to avoid conflict)
 Route::middleware('auth:api')->group(function () {
     Route::get('/events/my',       [EventController::class, 'myEvents']);
     Route::post('/events',         [EventController::class, 'store']);
-    Route::put('/events/{id}',     [EventController::class, 'update']);
-    Route::delete('/events/{id}',  [EventController::class, 'destroy']);
+    Route::put('/events/{id}',          [EventController::class, 'update']);
+    Route::patch('/events/{id}/toggle', [EventController::class, 'toggleActive']);
 });
+
+// Public event by slug (after /my to avoid swallowing it)
+Route::get('/events/{slug}', [EventController::class, 'showBySlug']);
 
 // Events — Super Admin
 Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('admin')->group(function () {

@@ -3,11 +3,15 @@
 namespace App\Providers;
 
 use App\Repositories\BankRepository;
+use App\Repositories\CategoryRepository;
 use App\Repositories\CityRepository;
 use App\Repositories\Contracts\BankRepositoryInterface;
+use App\Repositories\Contracts\CategoryRepositoryInterface;
 use App\Repositories\Contracts\CityRepositoryInterface;
 use App\Repositories\Contracts\EventRepositoryInterface;
 use App\Repositories\Contracts\OrganizerMemberRepositoryInterface;
+use App\Repositories\Contracts\TicketTypeRepositoryInterface;
+use App\Repositories\TicketTypeRepository;
 use App\Repositories\Contracts\ProvinceRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\EventRepository;
@@ -25,6 +29,8 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(CityRepositoryInterface::class, CityRepository::class);
         $this->app->bind(OrganizerMemberRepositoryInterface::class, OrganizerMemberRepository::class);
         $this->app->bind(BankRepositoryInterface::class, BankRepository::class);
+        $this->app->bind(CategoryRepositoryInterface::class, CategoryRepository::class);
         $this->app->bind(EventRepositoryInterface::class, EventRepository::class);
+        $this->app->bind(TicketTypeRepositoryInterface::class, TicketTypeRepository::class);
     }
 }

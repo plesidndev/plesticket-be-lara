@@ -39,8 +39,20 @@ class UpdateEventRequest extends FormRequest
             'address'     => ['sometimes', 'nullable', 'string'],
             'city'        => ['sometimes', 'nullable', 'string', 'max:100'],
             'province'    => ['sometimes', 'nullable', 'string', 'max:100'],
+            'latitude'    => ['sometimes', 'nullable', 'numeric', 'between:-90,90'],
+            'longitude'   => ['sometimes', 'nullable', 'numeric', 'between:-180,180'],
 
             'show_status' => ['sometimes', 'boolean'],
+
+            // Ticket types — if provided, replaces all existing
+            'ticket_types'               => ['sometimes', 'array'],
+            'ticket_types.*.name'        => ['required', 'string', 'max:100'],
+            'ticket_types.*.description' => ['nullable', 'string'],
+            'ticket_types.*.price'       => ['required', 'numeric', 'min:0'],
+            'ticket_types.*.quota'       => ['required', 'integer', 'min:1'],
+            'ticket_types.*.is_active'   => ['sometimes', 'boolean'],
+            'ticket_types.*.sale_start'  => ['nullable', 'date'],
+            'ticket_types.*.sale_end'    => ['nullable', 'date', 'after_or_equal:ticket_types.*.sale_start'],
         ];
     }
 

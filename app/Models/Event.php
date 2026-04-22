@@ -7,6 +7,7 @@ use App\Enums\VerificationStatus;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Event extends Model
@@ -40,6 +41,8 @@ class Event extends Model
         'verified_by',
         'show_status',
         'is_published',
+        'latitude',
+        'longitude',
     ];
 
     protected function casts(): array
@@ -55,6 +58,8 @@ class Event extends Model
             'is_online'           => 'boolean',
             'show_status'         => 'boolean',
             'is_published'        => 'boolean',
+            'latitude'            => 'decimal:7',
+            'longitude'           => 'decimal:7',
         ];
     }
 
@@ -66,5 +71,10 @@ class Event extends Model
     public function verifiedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'verified_by');
+    }
+
+    public function ticketTypes(): HasMany
+    {
+        return $this->hasMany(TicketType::class)->orderBy('price');
     }
 }
