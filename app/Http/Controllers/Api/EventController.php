@@ -23,7 +23,7 @@ class EventController extends Controller
     // Public — list verified events
     public function index(Request $request): JsonResponse
     {
-        $filters   = $request->only(['search', 'category', 'city', 'is_online']);
+        $filters   = $request->only(['search', 'category', 'city', 'is_online', 'sort']);
         $paginator = $this->service->listPublic((int) $request->query('limit', 15), $filters);
 
         return $this->paginated('Events retrieved.', EventResource::collection($paginator), $paginator);
@@ -53,8 +53,12 @@ class EventController extends Controller
     public function store(CreateEventRequest $request): JsonResponse
     {
         $data = $request->validated();
-        $data['pic_identity_number'] = $data['pic_identity_number'];
-        $data['pic_npwp']            = $data['pic_npwp'] ?? null;
+        $data['pic_npwp'] = $data['pic_npwp'] ?? null;
+
+        if ($request->hasFile('banner')) {
+            $data['banner_url'] = $request->file('banner')->store('banners', 'public');
+        }
+        unset($data['banner']);
 
         $event = $this->service->create(auth('api')->id(), $data);
 
@@ -64,8 +68,15 @@ class EventController extends Controller
     // REGISTERED_USER — update own event
     public function update(UpdateEventRequest $request, string $id): JsonResponse
     {
+        $data = $request->validated();
+
+        if ($request->hasFile('banner')) {
+            $data['banner_url'] = $request->file('banner')->store('banners', 'public');
+        }
+        unset($data['banner']);
+
         try {
-            $event = $this->service->update($id, auth('api')->id(), $request->validated());
+            $event = $this->service->update($id, auth('api')->id(), $data);
         } catch (RuntimeException $e) {
             return $this->error($e->getMessage(), 404);
         } catch (InvalidArgumentException $e) {
@@ -73,6 +84,33 @@ class EventController extends Controller
         }
 
         return $this->success('Event updated.', new EventResource($event));
+    }
+
+    // REGISTERED_USER — upload banner only
+    public function uploadBanner(Request $request, string $id): JsonResponse
+    {
+        if (! $request->hasFile('banner')) {
+            return $this->error('No banner file provided.', 422);
+        }
+
+        $request->validate([
+            'banner' => ['required', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+        ]);
+
+        try {
+            $event = $this->service->findById($id);
+        } catch (RuntimeException $e) {
+            return $this->error($e->getMessage(), 404);
+        }
+
+        if ($event->user_id !== auth('api')->id()) {
+            return $this->error('Event not found.', 404);
+        }
+
+        $path = $request->file('banner')->store('banners', 'public');
+        $event->update(['banner_url' => $path]);
+
+        return $this->success('Banner uploaded.', new EventResource($event->fresh(['user', 'ticketTypes'])));
     }
 
     // REGISTERED_USER — toggle active/inactive

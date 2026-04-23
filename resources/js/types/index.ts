@@ -1,4 +1,4 @@
-export type UserRole = 'SUPER_ADMIN' | 'REGISTERED_USER';
+export type UserRole = 'SUPER_ADMIN' | 'REGISTERED_USER' | 'BUYER';
 
 export interface User {
     id: number;
@@ -88,7 +88,7 @@ export interface Event {
     show_status: boolean;
     is_published: boolean;
     created_at: string;
-    ticket_types: TicketType[];
+    ticket_types: TicketType[] | undefined;
     organizer: User | null;
     verified_by: User | null;
 }

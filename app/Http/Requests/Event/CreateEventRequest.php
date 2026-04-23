@@ -23,6 +23,7 @@ class CreateEventRequest extends FormRequest
             'slug'        => ['nullable', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'],
             'description' => ['nullable', 'string'],
             'category'    => ['nullable', 'string', 'max:100'],
+            'banner'      => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'banner_url'  => ['nullable', 'url'],
 
             // PIC

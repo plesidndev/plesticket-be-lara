@@ -14,10 +14,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn() => response()->json(['status' => 'ok']));
 
-// Platform auth (REGISTERED_USER + SUPER_ADMIN)
+// Platform auth (REGISTERED_USER + SUPER_ADMIN + BUYER)
 Route::prefix('auth')->group(function () {
-    Route::post('/register', [AuthController::class, 'register']);
-    Route::post('/login',    [AuthController::class, 'login']);
+    Route::post('/register',       [AuthController::class, 'register']);
+    Route::post('/buyer-register', [AuthController::class, 'buyerRegister']);
+    Route::post('/login',          [AuthController::class, 'login']);
 
     Route::middleware('auth:api')->group(function () {
         Route::get('/me',      [AuthController::class, 'me']);
@@ -69,8 +70,10 @@ Route::get('/events', [EventController::class, 'index']);
 Route::middleware('auth:api')->group(function () {
     Route::get('/events/my',       [EventController::class, 'myEvents']);
     Route::post('/events',         [EventController::class, 'store']);
-    Route::put('/events/{id}',          [EventController::class, 'update']);
-    Route::patch('/events/{id}/toggle', [EventController::class, 'toggleActive']);
+    Route::post('/events/{id}',          [EventController::class, 'update']);
+    Route::put('/events/{id}',           [EventController::class, 'update']);
+    Route::post('/events/{id}/banner',   [EventController::class, 'uploadBanner']);
+    Route::patch('/events/{id}/toggle',  [EventController::class, 'toggleActive']);
 });
 
 // Public event by slug (after /my to avoid swallowing it)

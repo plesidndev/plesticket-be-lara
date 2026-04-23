@@ -1,4 +1,4 @@
-import { useState, useEffect, type FormEvent, type ReactNode, type ChangeEvent } from 'react';
+import { useState, useEffect, useRef, type FormEvent, type ReactNode, type ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createEvent, updateEvent, myEvents } from '../../api/events';
 import { listCategories } from '../../api/categories';
@@ -27,7 +27,7 @@ interface EventFormState {
     slug: string;
     description: string;
     category: string;
-    banner_url: string;
+    banner_url: string;  // existing URL (edit mode)
     pic_name: string;
     pic_identity_type: string;
     pic_identity_number: string;
@@ -65,6 +65,10 @@ export default function EventForm() {
     const navigate = useNavigate();
     const isEdit = Boolean(id);
     const [form, setForm] = useState<EventFormState>(empty);
+    const [bannerFile, setBannerFile] = useState<File | null>(null);
+    const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+    const [bannerError, setBannerError] = useState('');
+    const bannerRef = useRef<HTMLInputElement>(null);
     const [categories, setCategories] = useState<Category[]>([]);
     const [provinces, setProvinces] = useState<Province[]>([]);
     const [cities, setCities] = useState<City[]>([]);
@@ -130,6 +134,14 @@ export default function EventForm() {
     const set = <K extends keyof EventFormState>(key: K, val: EventFormState[K]) =>
         setForm(f => ({ ...f, [key]: val }));
 
+    const handleBanner = (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setBannerError('');
+        setBannerFile(file);
+        setBannerPreview(URL.createObjectURL(file));
+    };
+
     const addTicket = () => setForm(f => ({ ...f, ticket_types: [...f.ticket_types, { ...emptyTicket }] }));
     const removeTicket = (i: number) => setForm(f => ({ ...f, ticket_types: f.ticket_types.filter((_, idx) => idx !== i) }));
     const setTicket = (i: number, key: keyof TicketFormRow, val: string) =>
@@ -139,15 +151,37 @@ export default function EventForm() {
             return { ...f, ticket_types: tickets };
         });
 
+    const buildFormData = (): FormData => {
+        const fd = new FormData();
+        const { ticket_types, ...rest } = form;
+
+        Object.entries(rest).forEach(([k, v]) => {
+            if (v !== null && v !== undefined && v !== '') {
+                fd.append(k, String(v));
+            }
+        });
+
+        ticket_types.forEach((t, i) => {
+            Object.entries(t).forEach(([k, v]) => {
+                if (v !== '') fd.append(`ticket_types[${i}][${k}]`, String(v));
+            });
+        });
+
+        if (bannerFile) fd.append('banner', bannerFile);
+
+        return fd;
+    };
+
     const submit = async (e: FormEvent) => {
         e.preventDefault();
         setErrors({});
         setSaving(true);
         try {
+            const fd = buildFormData();
             if (isEdit) {
-                await updateEvent(id!, form);
+                await updateEvent(id!, fd);
             } else {
-                await createEvent(form);
+                await createEvent(fd);
             }
             navigate('/admin/events');
         } catch (err: unknown) {
@@ -188,17 +222,37 @@ export default function EventForm() {
                     <Field label="Description" error={errMsg('description')}>
                         <textarea {...field('description')} rows={3} style={{ resize: 'none' }} placeholder="Event description" />
                     </Field>
-                    <div className="grid grid-cols-2 gap-3">
-                        <Field label="Category" error={errMsg('category')}>
-                            <select {...field('category')}>
-                                <option value="">— Select category —</option>
-                                {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
-                            </select>
-                        </Field>
-                        <Field label="Banner URL" error={errMsg('banner_url')}>
-                            <input {...field('banner_url')} placeholder="https://…" />
-                        </Field>
-                    </div>
+                    <Field label="Category" error={errMsg('category')}>
+                        <select {...field('category')}>
+                            <option value="">— Select category —</option>
+                            {categories.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                        </select>
+                    </Field>
+                    <Field label="Banner Image" error={bannerError || errMsg('banner')}>
+                        <div className="space-y-2">
+                            {(bannerPreview || form.banner_url) && (
+                                <img
+                                    src={bannerPreview ?? form.banner_url}
+                                    alt="banner preview"
+                                    className="w-full rounded-lg object-cover"
+                                    style={{ aspectRatio: '1920/800' }}
+                                />
+                            )}
+                            <label className={`flex items-center gap-2 cursor-pointer w-full border rounded-lg px-3 py-2 text-sm ${bannerError ? 'border-red-400' : 'border-gray-300'} hover:bg-gray-50`}>
+                                <span className="text-gray-500">
+                                    {bannerFile ? bannerFile.name : isEdit ? 'Replace banner…' : 'Choose image…'}
+                                </span>
+                                <input
+                                    ref={bannerRef}
+                                    type="file"
+                                    accept="image/jpeg,image/png,image/webp"
+                                    onChange={handleBanner}
+                                    className="hidden"
+                                />
+                            </label>
+                            <p className="text-xs text-gray-400">Required size: 1920 × 800 px · JPG, PNG or WebP · max 5 MB</p>
+                        </div>
+                    </Field>
                 </Section>
 
                 <Section title="Person in Charge (PIC)">

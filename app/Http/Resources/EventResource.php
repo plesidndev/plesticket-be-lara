@@ -20,7 +20,9 @@ class EventResource extends JsonResource
             'slug'         => $this->slug,
             'description'  => $this->description,
             'category'     => $this->category,
-            'banner_url'   => $this->banner_url,
+            'banner_url'   => $this->banner_url
+                ? (str_starts_with($this->banner_url, 'http') ? $this->banner_url : asset('storage/' . $this->banner_url))
+                : null,
 
             // PIC — only visible to admin or owner
             'pic' => ($isAdmin || $isOwner) ? [

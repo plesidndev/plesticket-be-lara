@@ -14,11 +14,17 @@ export const getBySlug = (slug: string): Promise<EventResponse> =>
 export const myEvents = (params?: Record<string, unknown>): Promise<EventsResponse> =>
     client.get('/events/my', { params });
 
-export const createEvent = (data: Record<string, unknown>): Promise<EventResponse> =>
+export const createEvent = (data: FormData): Promise<EventResponse> =>
     client.post('/events', data);
 
-export const updateEvent = (id: string, data: Record<string, unknown>): Promise<EventResponse> =>
-    client.put(`/events/${id}`, data);
+export const updateEvent = (id: string, data: FormData): Promise<EventResponse> =>
+    client.post(`/events/${id}`, data);
+
+export const uploadEventBanner = (id: string, file: File): Promise<EventResponse> => {
+    const fd = new FormData();
+    fd.append('banner', file);
+    return client.post(`/events/${id}/banner`, fd);
+};
 
 export const toggleEventActive = (id: string): Promise<EventResponse> =>
     client.patch(`/events/${id}/toggle`);

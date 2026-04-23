@@ -119,7 +119,7 @@ export default function Register() {
 
                 <p className="text-center text-sm text-gray-500 mt-5">
                     Already have an account?{' '}
-                    <Link to="/login" className="text-indigo-600 hover:underline font-medium">Sign in</Link>
+                    <Link to="/admin/login" className="text-indigo-600 hover:underline font-medium">Sign in</Link>
                 </p>
             </div>
         </div>

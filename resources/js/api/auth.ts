@@ -13,6 +13,9 @@ export const login = (email: string, password: string): Promise<AxiosResponse<Ap
 export const register = (data: Record<string, string>): Promise<AxiosResponse<ApiResponse<LoginData>>> =>
     client.post('/auth/register', data);
 
+export const buyerRegister = (data: Record<string, string>): Promise<AxiosResponse<ApiResponse<LoginData>>> =>
+    client.post('/auth/buyer-register', data);
+
 export const me = (): Promise<AxiosResponse<ApiResponse<User>>> =>
     client.get('/auth/me');
 

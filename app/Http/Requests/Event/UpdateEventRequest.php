@@ -22,6 +22,7 @@ class UpdateEventRequest extends FormRequest
             'slug'        => ['sometimes', 'nullable', 'string', 'max:255', 'regex:/^[a-z0-9]+(?:-[a-z0-9]+)*$/'],
             'description' => ['sometimes', 'nullable', 'string'],
             'category'    => ['sometimes', 'nullable', 'string', 'max:100'],
+            'banner'      => ['sometimes', 'nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
             'banner_url'  => ['sometimes', 'nullable', 'url'],
 
             'pic_name'            => ['sometimes', 'string', 'max:255'],

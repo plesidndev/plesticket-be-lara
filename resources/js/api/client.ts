@@ -14,7 +14,8 @@ client.interceptors.response.use(
         if (err.response?.status === 401) {
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            window.location.href = '/login';
+            const isPlestAdmin = window.location.pathname.startsWith('/plest-admin');
+            window.location.href = isPlestAdmin ? '/plest-admin/login' : '/admin/login';
         }
         return Promise.reject(err);
     }

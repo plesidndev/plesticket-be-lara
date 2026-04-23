@@ -6,12 +6,14 @@ enum UserRole: string
 {
     case SuperAdmin     = 'SUPER_ADMIN';
     case RegisteredUser = 'REGISTERED_USER';
+    case Buyer          = 'BUYER';
 
     public function label(): string
     {
         return match($this) {
             self::SuperAdmin     => 'Super Admin',
             self::RegisteredUser => 'Registered User',
+            self::Buyer          => 'Buyer',
         };
     }
 }

@@ -1,6 +1,6 @@
-import { useState, useEffect, type ReactNode } from 'react';
+import { useState, useEffect, useRef, type ReactNode, type ChangeEvent } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { myEvents } from '../../api/events';
+import { myEvents, uploadEventBanner } from '../../api/events';
 import Layout from '../../components/Layout';
 import StatusBadge from '../../components/StatusBadge';
 import type { Event } from '../../types';
@@ -10,14 +10,35 @@ export default function UserEventDetail() {
     const navigate = useNavigate();
     const [event, setEvent] = useState<Event | null>(null);
     const [loading, setLoading] = useState(true);
+    const [bannerError, setBannerError] = useState('');
+    const [uploading, setUploading] = useState(false);
+    const bannerRef = useRef<HTMLInputElement>(null);
 
-    useEffect(() => {
+    const load = () => {
         myEvents({ limit: 100 }).then(res => {
             const ev = res.data.data.find(e => e.id === id);
             if (!ev) { navigate('/admin/events'); return; }
             setEvent(ev);
         }).finally(() => setLoading(false));
-    }, [id, navigate]);
+    };
+
+    useEffect(() => { load(); }, [id, navigate]);
+
+    const handleBannerUpload = async (e: ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setBannerError('');
+        setUploading(true);
+        try {
+            await uploadEventBanner(id!, file);
+            load();
+        } catch {
+            setBannerError('Upload failed. Please try again.');
+        } finally {
+            setUploading(false);
+            if (bannerRef.current) bannerRef.current.value = '';
+        }
+    };
 
     if (loading) return <Layout><div className="text-gray-400 text-sm">Loading…</div></Layout>;
     if (!event) return null;
@@ -32,6 +53,33 @@ export default function UserEventDetail() {
                     {event.is_published ? 'Active' : 'Inactive'}
                 </span>
             </div>
+
+            {event.banner_url ? (
+                <div className="mb-4 rounded-xl overflow-hidden border border-gray-200">
+                    <img
+                        src={event.banner_url}
+                        alt="banner"
+                        className="w-full object-cover"
+                        style={{ aspectRatio: '1920/800' }}
+                    />
+                </div>
+            ) : (
+                <div className="mb-4 rounded-xl border-2 border-dashed border-gray-300 bg-gray-50 flex flex-col items-center justify-center gap-2 py-10">
+                    <p className="text-sm text-gray-500">No banner image yet</p>
+                    <label className={`cursor-pointer bg-indigo-600 text-white text-sm px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors ${uploading ? 'opacity-50 pointer-events-none' : ''}`}>
+                        {uploading ? 'Uploading…' : 'Upload Banner'}
+                        <input
+                            ref={bannerRef}
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp"
+                            onChange={handleBannerUpload}
+                            className="hidden"
+                        />
+                    </label>
+                    {bannerError && <p className="text-xs text-red-500">{bannerError}</p>}
+                    <p className="text-xs text-gray-400">1920 × 800 px · JPG, PNG or WebP · max 5 MB</p>
+                </div>
+            )}
 
             {event.verification_status === 'rejected' && event.rejection_reason && (
                 <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-4 py-3 rounded-lg mb-4">
@@ -48,11 +96,6 @@ export default function UserEventDetail() {
                         <Row label="Slug" value={event.slug} />
                         <Row label="Category" value={event.category ?? '—'} />
                         <Row label="Description" value={event.description ?? '—'} />
-                        {event.banner_url && (
-                            <div className="pt-2">
-                                <img src={event.banner_url} alt="banner" className="rounded-lg w-full object-cover max-h-40" />
-                            </div>
-                        )}
                     </dl>
                 </div>
 

@@ -1,9 +1,15 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuth } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import Home from './pages/Home';
+import EventList from './pages/EventList';
+import EventDetail from './pages/EventDetail';
+import BuyerLogin from './pages/auth/Login';
+import BuyerRegister from './pages/auth/Register';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
+import AdminLogin from './pages/admin/Login';
 import AdminUsers from './pages/admin/Users';
 import AdminEvents from './pages/admin/Events';
 import AdminEventDetail from './pages/admin/EventDetail';
@@ -15,16 +21,24 @@ import UserEventDetail from './pages/user/EventDetail';
 
 function Root() {
     const { user } = useAuth();
-    if (!user) return <Navigate to="/login" replace />;
-    return <Navigate to={user.role === 'SUPER_ADMIN' ? '/plest-admin/events' : '/admin/events'} replace />;
+    if (user?.role === 'SUPER_ADMIN') return <Navigate to="/plest-admin/events" replace />;
+    if (user?.role === 'REGISTERED_USER') return <Navigate to="/admin/events" replace />;
+    return <Navigate to="/home" replace />;
 }
 
 export default function Router() {
     return (
         <BrowserRouter>
             <Routes>
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
+                {/* Public routes */}
+                <Route path="/home" element={<Home />} />
+                <Route path="/events" element={<EventList />} />
+                <Route path="/events/:slug" element={<EventDetail />} />
+                <Route path="/login" element={<BuyerLogin />} />
+                <Route path="/register" element={<BuyerRegister />} />
+                <Route path="/admin/login" element={<Login />} />
+                <Route path="/admin/register" element={<Register />} />
+                <Route path="/plest-admin/login" element={<AdminLogin />} />
                 <Route path="/" element={<Root />} />
 
                 {/* Super Admin routes */}

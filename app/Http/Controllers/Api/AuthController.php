@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Enums\UserRole;
+use App\Http\Requests\Auth\BuyerRegisterRequest;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
@@ -19,7 +21,17 @@ class AuthController extends Controller
 
     public function register(RegisterRequest $request): JsonResponse
     {
-        $result = $this->auth->register($request->validated());
+        $result = $this->auth->register($request->validated(), UserRole::RegisteredUser);
+
+        return $this->created('Registration successful', [
+            'token' => $result['token'],
+            'user'  => new UserResource($result['user']),
+        ]);
+    }
+
+    public function buyerRegister(BuyerRegisterRequest $request): JsonResponse
+    {
+        $result = $this->auth->register($request->validated(), UserRole::Buyer);
 
         return $this->created('Registration successful', [
             'token' => $result['token'],

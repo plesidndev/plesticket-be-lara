@@ -12,7 +12,7 @@ export default function Layout({ children }: { children: ReactNode }) {
 
     const handleLogout = async () => {
         await logout();
-        navigate('/login');
+        navigate(isAdmin ? '/plest-admin/login' : '/admin/login');
     };
 
     return (

@@ -13,16 +13,16 @@ class AuthService
         private readonly UserRepositoryInterface $users,
     ) {}
 
-    public function register(array $data): array
+    public function register(array $data, UserRole $role = UserRole::RegisteredUser): array
     {
         $user = $this->users->create([
             'name'          => $data['name'],
-            'username'      => $data['username'],
+            'username'      => $data['username'] ?? null,
             'email'         => strtolower(trim($data['email'])),
             'phone'         => $data['phone'] ?? null,
-            'date_of_birth' => $data['date_of_birth'],
+            'date_of_birth' => $data['date_of_birth'] ?? null,
             'password'      => $data['password'],
-            'role'          => UserRole::RegisteredUser,
+            'role'          => $role,
             'is_active'     => true,
         ]);
 

@@ -10,10 +10,9 @@ class EventRepository implements EventRepositoryInterface
 {
     public function paginatePublic(int $perPage, array $filters = []): LengthAwarePaginator
     {
-        $query = Event::with('user')
+        $query = Event::with(['user', 'ticketTypes'])
             ->where('verification_status', 'verified')
-            ->where('show_status', true)
-            ->orderByDesc('start_date');
+            ->where('show_status', true);
 
         if (! empty($filters['category'])) {
             $query->where('category', $filters['category']);
@@ -33,6 +32,12 @@ class EventRepository implements EventRepositoryInterface
                   ->orWhere('description', 'ilike', '%' . $filters['search'] . '%');
             });
         }
+
+        match($filters['sort'] ?? 'upcoming') {
+            'date_desc' => $query->orderByDesc('start_date'),
+            'newest'    => $query->orderByDesc('created_at'),
+            default     => $query->orderBy('start_date', 'asc'), // upcoming: soonest first
+        };
 
         return $query->paginate($perPage);
     }
