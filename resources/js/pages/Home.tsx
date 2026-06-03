@@ -38,7 +38,7 @@ export default function Home() {
     };
 
     const handleCategoryClick = (name: string) => {
-        navigate(`/events?category=${encodeURIComponent(name.toLowerCase())}`);
+        navigate(`/events?category=${encodeURIComponent(name)}`);
     };
 
     return (

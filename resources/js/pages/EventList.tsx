@@ -68,8 +68,7 @@ export default function EventList() {
     };
 
     const handleCategoryClick = (name: string) => {
-        const val = name.toLowerCase();
-        setParam('category', activeCategory === val ? '' : val);
+        setParam('category', activeCategory.toLowerCase() === name.toLowerCase() ? '' : name);
     };
 
     return (
@@ -133,7 +132,7 @@ export default function EventList() {
                         <Chip
                             key={cat.id}
                             label={`${cat.icon} ${cat.name}`}
-                            active={activeCategory === cat.name.toLowerCase()}
+                            active={activeCategory.toLowerCase() === cat.name.toLowerCase()}
                             onClick={() => handleCategoryClick(cat.name)}
                         />
                     ))}

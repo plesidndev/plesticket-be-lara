@@ -157,7 +157,7 @@ export default function EventForm() {
 
         Object.entries(rest).forEach(([k, v]) => {
             if (v !== null && v !== undefined && v !== '') {
-                fd.append(k, String(v));
+                fd.append(k, typeof v === 'boolean' ? (v ? '1' : '0') : String(v));
             }
         });
 
