@@ -4,7 +4,9 @@
     "type": "module",
     "scripts": {
         "build": "vite build",
-        "dev": "vite"
+        "dev": "vite",
+        "test:e2e": "playwright test",
+        "test:e2e:report": "playwright test && playwright show-report"
     },
     "devDependencies": {
         "@tailwindcss/vite": "^4.0.0",
