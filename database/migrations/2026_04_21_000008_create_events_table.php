@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('events', function (Blueprint $table) {
-            $table->uuid('id')->primary()->default(\Illuminate\Support\Facades\DB::raw('gen_random_uuid()'));
+            $table->uuid('id')->primary();
             // event_id: EVT0001 now → {custom_code} once ID format is finalized
             $table->string('event_id', 20)->unique()->nullable();
             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
