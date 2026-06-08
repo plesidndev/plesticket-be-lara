@@ -70,7 +70,14 @@ class EventRepository implements EventRepositoryInterface
 
     public function findById(string $id): ?Event
     {
-        return Event::with(['user', 'verifiedBy', 'ticketTypes'])->find($id);
+        $query = Event::with(['user', 'verifiedBy', 'ticketTypes']);
+
+        // UUID primary key vs event_id string (e.g. EVT0032)
+        if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $id)) {
+            return $query->find($id);
+        }
+
+        return $query->where('event_id', $id)->first();
     }
 
     public function findBySlug(string $slug): ?Event
@@ -105,7 +112,10 @@ class EventRepository implements EventRepositoryInterface
     public function isSlugTaken(string $slug, ?string $excludeId = null): bool
     {
         return Event::where('slug', $slug)
-            ->when($excludeId, fn($q) => $q->where('id', '!=', $excludeId))
+            ->when($excludeId, function ($q) use ($excludeId) {
+                $isUuid = preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $excludeId);
+                $q->where($isUuid ? 'id' : 'event_id', '!=', $excludeId);
+            })
             ->exists();
     }
 }

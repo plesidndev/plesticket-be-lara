@@ -2,4 +2,4 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::get("/{any}", fn () => view("app"))->where("any", ".*");
+Route::get('/', fn () => response()->json(['status' => 'ok', 'message' => 'Plesticket API']));
