@@ -84,6 +84,12 @@ export default function AdminEventDetail() {
                 )}
             </div>
 
+            {event.banner_url && (
+                <div className="mb-6 rounded-xl overflow-hidden border border-gray-200 bg-gray-100" style={{ height: '240px' }}>
+                    <img src={event.banner_url} alt={event.title} className="w-full h-full object-cover" />
+                </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <div className="bg-white rounded-xl border border-gray-200 p-5">
                     <h2 className="font-semibold text-gray-700 mb-3 text-sm uppercase tracking-wide">Event Info</h2>

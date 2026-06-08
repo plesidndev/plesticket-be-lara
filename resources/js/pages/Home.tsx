@@ -12,12 +12,31 @@ import type { Event } from '../types';
 
 export default function Home() {
     const navigate = useNavigate();
-    const { user } = useAuth();
+    const { user, logout } = useAuth();
     const [recommended, setRecommended] = useState<Event[]>([]);
     const [nearest, setNearest] = useState<Event[]>([]);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
+    const [menuOpen, setMenuOpen] = useState(false);
     const searchRef = useRef<HTMLInputElement>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        if (!menuOpen) return;
+        const handleClick = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+                setMenuOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClick);
+        return () => document.removeEventListener('mousedown', handleClick);
+    }, [menuOpen]);
+
+    const handleLogout = async () => {
+        setMenuOpen(false);
+        await logout();
+        navigate('/login');
+    };
 
     useEffect(() => {
         Promise.all([
@@ -63,14 +82,36 @@ export default function Home() {
                     </div>
                     <div className="flex items-center gap-2">
                         {user ? (
-                            <button
-                                onClick={() => navigate(user.role === 'SUPER_ADMIN' ? '/plest-admin/events' : '/admin/events')}
-                                className="w-9 h-9 rounded-full bg-violet-600/20 border border-violet-500/30 flex items-center justify-center"
-                            >
-                                <svg className="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                                </svg>
-                            </button>
+                            <div className="relative" ref={menuRef}>
+                                <button
+                                    onClick={() => setMenuOpen(v => !v)}
+                                    className="w-9 h-9 rounded-full bg-violet-600/20 border border-violet-500/30 flex items-center justify-center"
+                                >
+                                    <svg className="w-4 h-4 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                                    </svg>
+                                </button>
+                                {menuOpen && (
+                                    <div className="absolute right-0 top-11 w-44 bg-zinc-900 border border-zinc-700 rounded-xl shadow-xl z-50 overflow-hidden">
+                                        <div className="px-3 py-2 border-b border-zinc-800">
+                                            <p className="text-xs font-medium text-white truncate">{user.name}</p>
+                                            <p className="text-xs text-zinc-500 truncate">{user.email}</p>
+                                        </div>
+                                        <button
+                                            onClick={() => { setMenuOpen(false); navigate(user.role === 'SUPER_ADMIN' ? '/plest-admin/events' : '/admin/events'); }}
+                                            className="w-full text-left px-3 py-2.5 text-sm text-zinc-300 hover:bg-zinc-800 transition-colors"
+                                        >
+                                            Dashboard
+                                        </button>
+                                        <button
+                                            onClick={handleLogout}
+                                            className="w-full text-left px-3 py-2.5 text-sm text-red-400 hover:bg-zinc-800 transition-colors"
+                                        >
+                                            Logout
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
                         ) : (
                             <button
                                 onClick={() => navigate('/login')}

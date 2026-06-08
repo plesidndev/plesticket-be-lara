@@ -70,7 +70,7 @@ export default function MyEvents() {
                                 {/* Banner */}
                                 <div
                                     className="relative w-full bg-gray-100 cursor-pointer"
-                                    style={{ aspectRatio: '1920/800' }}
+                                    style={{ height: '160px' }}
                                     onClick={() => navigate(`/admin/events/${ev.id}`)}
                                 >
                                     {ev.banner_url ? (

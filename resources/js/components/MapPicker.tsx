@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 
@@ -20,12 +20,26 @@ interface Props {
     onChange: (coords: { lat: string; lng: string }) => void;
 }
 
+interface NominatimResult {
+    place_id: number;
+    display_name: string;
+    lat: string;
+    lon: string;
+}
+
 const INDONESIA_CENTER: L.LatLngTuple = [-2.5, 118.0];
 
 export default function MapPicker({ lat, lng, onChange }: Props) {
     const containerRef = useRef<HTMLDivElement>(null);
     const mapRef = useRef<L.Map | null>(null);
     const markerRef = useRef<L.Marker | null>(null);
+
+    const [query, setQuery] = useState('');
+    const [results, setResults] = useState<NominatimResult[]>([]);
+    const [searching, setSearching] = useState(false);
+    const [showResults, setShowResults] = useState(false);
+    const searchRef = useRef<HTMLDivElement>(null);
+    const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const hasPosition = lat !== '' && lat !== null && lng !== '' && lng !== null;
     const position: L.LatLngTuple | null = hasPosition
@@ -84,6 +98,61 @@ export default function MapPicker({ lat, lng, onChange }: Props) {
         }
     }, [hasPosition]);
 
+    // Close results when clicking outside
+    useEffect(() => {
+        if (!showResults) return;
+        const handle = (e: MouseEvent) => {
+            if (searchRef.current && !searchRef.current.contains(e.target as Node)) {
+                setShowResults(false);
+            }
+        };
+        document.addEventListener('mousedown', handle);
+        return () => document.removeEventListener('mousedown', handle);
+    }, [showResults]);
+
+    const handleQueryChange = (value: string) => {
+        setQuery(value);
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+        if (!value.trim()) { setResults([]); setShowResults(false); return; }
+        debounceRef.current = setTimeout(async () => {
+            setSearching(true);
+            try {
+                const res = await fetch(
+                    `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(value)}&format=json&limit=5&countrycodes=id`,
+                    { headers: { 'Accept-Language': 'id,en' } },
+                );
+                const data: NominatimResult[] = await res.json();
+                setResults(data);
+                setShowResults(true);
+            } catch {
+                setResults([]);
+            } finally {
+                setSearching(false);
+            }
+        }, 500);
+    };
+
+    const selectResult = (r: NominatimResult) => {
+        const la = parseFloat(r.lat);
+        const lo = parseFloat(r.lon);
+        setShowResults(false);
+        setQuery(r.display_name.split(',')[0]);
+
+        if (mapRef.current) {
+            mapRef.current.flyTo([la, lo], 16, { duration: 1 });
+        }
+        if (markerRef.current) {
+            markerRef.current.setLatLng([la, lo]);
+        } else if (mapRef.current) {
+            markerRef.current = L.marker([la, lo], { draggable: true }).addTo(mapRef.current);
+            markerRef.current.on('dragend', () => {
+                const { lat: dla, lng: dlo } = markerRef.current!.getLatLng();
+                onChange({ lat: String(dla), lng: String(dlo) });
+            });
+        }
+        onChange({ lat: String(la), lng: String(lo) });
+    };
+
     const clear = () => {
         if (markerRef.current) {
             markerRef.current.remove();
@@ -94,6 +163,44 @@ export default function MapPicker({ lat, lng, onChange }: Props) {
 
     return (
         <div className="space-y-2">
+            {/* Search box */}
+            <div className="relative" ref={searchRef}>
+                <div className="relative">
+                    <input
+                        type="text"
+                        value={query}
+                        onChange={e => handleQueryChange(e.target.value)}
+                        placeholder="Search location…"
+                        className="w-full border border-gray-300 rounded-lg px-3 py-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400"
+                    />
+                    {searching && (
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">…</span>
+                    )}
+                </div>
+
+                {showResults && results.length > 0 && (
+                    <ul className="absolute z-9999 top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-lg shadow-lg max-h-52 overflow-y-auto">
+                        {results.map(r => (
+                            <li key={r.place_id}>
+                                <button
+                                    type="button"
+                                    onClick={() => selectResult(r)}
+                                    className="w-full text-left px-3 py-2 text-sm text-gray-700 hover:bg-indigo-50 border-b border-gray-100 last:border-0"
+                                >
+                                    {r.display_name}
+                                </button>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+
+                {showResults && results.length === 0 && !searching && (
+                    <div className="absolute z-9999 top-full mt-1 left-0 right-0 bg-white border border-gray-200 rounded-lg shadow p-3 text-sm text-gray-400">
+                        No results found.
+                    </div>
+                )}
+            </div>
+
             <div ref={containerRef} style={{ width: '100%', height: '320px', borderRadius: '8px' }} />
             <div className="flex items-center justify-between text-xs text-gray-500">
                 {position ? (
@@ -105,7 +212,7 @@ export default function MapPicker({ lat, lng, onChange }: Props) {
                         <button type="button" onClick={clear} className="text-red-400 hover:text-red-600">Clear</button>
                     </>
                 ) : (
-                    <span className="text-gray-400">Click on the map to pin the location</span>
+                    <span className="text-gray-400">Search above or click on the map to pin the location</span>
                 )}
             </div>
         </div>

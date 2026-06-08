@@ -1,11 +1,12 @@
-import { useState, useEffect, useRef, type FormEvent, type ReactNode, type ChangeEvent } from 'react';
+import { useState, useEffect, useRef, lazy, Suspense, type FormEvent, type ReactNode, type ChangeEvent } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { createEvent, updateEvent, myEvents } from '../../api/events';
 import { listCategories } from '../../api/categories';
 import { listProvinces, listCities } from '../../api/locations';
 import Layout from '../../components/Layout';
-import MapPicker from '../../components/MapPicker';
 import type { Category, Province, City } from '../../types';
+
+const MapPicker = lazy(() => import('../../components/MapPicker'));
 
 const IDENTITY_TYPES: { value: string; label: string }[] = [
     { value: 'ktp',      label: 'KTP' },
@@ -340,11 +341,13 @@ export default function EventForm() {
                                 </Field>
                             </div>
                             <Field label="Pin Location on Map" error={errMsg('latitude')}>
-                                <MapPicker
-                                    lat={form.latitude}
-                                    lng={form.longitude}
-                                    onChange={({ lat, lng }) => { set('latitude', lat); set('longitude', lng); }}
-                                />
+                                <Suspense fallback={<div className="w-full h-80 rounded-lg bg-gray-100 animate-pulse" />}>
+                                    <MapPicker
+                                        lat={form.latitude}
+                                        lng={form.longitude}
+                                        onChange={({ lat, lng }) => { set('latitude', lat); set('longitude', lng); }}
+                                    />
+                                </Suspense>
                             </Field>
                         </>
                     )}

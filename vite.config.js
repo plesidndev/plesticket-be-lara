@@ -12,6 +12,15 @@ export default defineConfig({
         tailwindcss(),
         react(),
     ],
+    build: {
+        rollupOptions: {
+            output: {
+                manualChunks: (id) => {
+                    if (id.includes('leaflet') || id.includes('react-leaflet')) return 'leaflet';
+                },
+            },
+        },
+    },
     server: {
         watch: {
             ignored: ['**/storage/framework/views/**'],
