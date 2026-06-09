@@ -5,10 +5,12 @@ use App\Http\Controllers\Api\BankController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CityController;
 use App\Http\Controllers\Api\EventController;
+use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\OrganizerAuthController;
 use App\Http\Controllers\Api\OrganizerMemberController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ProvinceController;
+use App\Http\Controllers\Api\TicketController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Support\Facades\Route;
 
@@ -95,3 +97,16 @@ Route::middleware('auth:api')->prefix('events/{eventId}/members')->group(functio
     Route::put('/{memberId}',    [OrganizerMemberController::class, 'update']);
     Route::delete('/{memberId}', [OrganizerMemberController::class, 'destroy']);
 });
+
+// Orders — authenticated buyer
+Route::middleware('auth:api')->prefix('orders')->group(function () {
+    Route::get('/',                       [OrderController::class, 'index']);
+    Route::post('/',                      [OrderController::class, 'store']);
+    Route::get('/{orderNumber}',          [OrderController::class, 'show']);
+    Route::post('/{orderNumber}/pay',     [OrderController::class, 'pay']);
+    Route::post('/{orderNumber}/cancel',  [OrderController::class, 'cancel']);
+});
+
+// Tickets — lookup open to any auth (buyer or organizer), scan organizer only
+Route::get('/tickets/{code}',       [TicketController::class, 'show'])->middleware('auth:api');
+Route::post('/tickets/{code}/scan', [TicketController::class, 'scan'])->middleware('auth:organizer');

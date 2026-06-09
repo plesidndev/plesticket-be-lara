@@ -9,14 +9,18 @@ use App\Repositories\Contracts\BankRepositoryInterface;
 use App\Repositories\Contracts\CategoryRepositoryInterface;
 use App\Repositories\Contracts\CityRepositoryInterface;
 use App\Repositories\Contracts\EventRepositoryInterface;
+use App\Repositories\Contracts\OrderRepositoryInterface;
 use App\Repositories\Contracts\OrganizerMemberRepositoryInterface;
+use App\Repositories\Contracts\TicketRepositoryInterface;
 use App\Repositories\Contracts\TicketTypeRepositoryInterface;
 use App\Repositories\TicketTypeRepository;
 use App\Repositories\Contracts\ProvinceRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\EventRepository;
+use App\Repositories\OrderRepository;
 use App\Repositories\OrganizerMemberRepository;
 use App\Repositories\ProvinceRepository;
+use App\Repositories\TicketRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Support\ServiceProvider;
 
@@ -32,5 +36,7 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(CategoryRepositoryInterface::class, CategoryRepository::class);
         $this->app->bind(EventRepositoryInterface::class, EventRepository::class);
         $this->app->bind(TicketTypeRepositoryInterface::class, TicketTypeRepository::class);
+        $this->app->bind(OrderRepositoryInterface::class, OrderRepository::class);
+        $this->app->bind(TicketRepositoryInterface::class, TicketRepository::class);
     }
 }
