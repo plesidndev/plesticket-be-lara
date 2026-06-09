@@ -25,8 +25,8 @@ class OrderRepository implements OrderRepositoryInterface
 
     public function create(array $data): Order
     {
+        $data['order_number'] = sprintf('ORD%s%05d', now()->format('Ymd'), Order::count() + 1);
         $order = Order::create($data);
-        $order->update(['order_number' => sprintf('ORD%s%05d', now()->format('Ymd'), Order::count())]);
         return $order->fresh(['event', 'items']);
     }
 

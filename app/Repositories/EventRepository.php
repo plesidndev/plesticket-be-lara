@@ -91,10 +91,8 @@ class EventRepository implements EventRepositoryInterface
 
     public function create(array $data): Event
     {
+        $data['event_id'] = sprintf('EVT%04d', Event::withTrashed()->count() + 1);
         $event = Event::create($data);
-
-        $event->update(['event_id' => sprintf('EVT%04d', Event::withTrashed()->count())]);
-
         return $event->fresh();
     }
 
