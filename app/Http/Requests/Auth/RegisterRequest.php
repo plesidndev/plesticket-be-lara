@@ -2,8 +2,8 @@
 
 namespace App\Http\Requests\Auth;
 
-use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
+use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
 class RegisterRequest extends FormRequest
@@ -16,12 +16,12 @@ class RegisterRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'          => ['required', 'string', 'max:255'],
-            'username'      => ['required', 'string', 'max:50', 'alpha_dash', 'unique:users,username'],
-            'email'         => ['required', 'email', 'unique:users,email'],
-            'password'      => ['required', 'string', 'min:8'],
-            'phone'         => ['nullable', 'string', 'max:20'],
-            'date_of_birth' => ['required', 'date', 'date_format:Y-m-d', 'before:today'],
+            'name'                  => ['required', 'string', 'max:255'],
+            'email'                 => ['required', 'email', 'unique:users,email'],
+            'password'              => ['required', 'string', 'min:8', 'confirmed'],
+            'phone'                 => ['nullable', 'string', 'max:20'],
+            'username'              => ['nullable', 'string', 'max:50', 'alpha_dash', 'unique:users,username'],
+            'date_of_birth'         => ['nullable', 'date', 'date_format:Y-m-d', 'before:today'],
         ];
     }
 
@@ -29,7 +29,7 @@ class RegisterRequest extends FormRequest
     {
         throw new HttpResponseException(response()->json([
             'status'  => 'error',
-            'message' => 'Validation failed',
+            'message' => 'Validation failed.',
             'errors'  => $validator->errors(),
         ], 422));
     }

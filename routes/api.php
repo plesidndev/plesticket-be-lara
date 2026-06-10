@@ -16,11 +16,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn() => response()->json(['status' => 'ok']));
 
-// Platform auth (REGISTERED_USER + SUPER_ADMIN + BUYER)
+// Platform auth
 Route::prefix('auth')->group(function () {
-    Route::post('/register',       [AuthController::class, 'register']);
-    Route::post('/buyer-register', [AuthController::class, 'buyerRegister']);
-    Route::post('/login',          [AuthController::class, 'login']);
+    Route::post('/register', [AuthController::class, 'register']);
+    Route::post('/login',    [AuthController::class, 'login']);
 
     Route::middleware('auth:api')->group(function () {
         Route::get('/me',      [AuthController::class, 'me']);
