@@ -59,6 +59,7 @@ class EventResource extends JsonResource
             'created_at'          => $this->created_at,
 
             'ticket_types' => TicketTypeResource::collection($this->whenLoaded('ticketTypes')),
+            'talents'      => EventTalentResource::collection($this->whenLoaded('eventTalents')),
 
             'organizer'   => new UserResource($this->whenLoaded('user')),
             'verified_by' => $isAdmin ? new UserResource($this->whenLoaded('verifiedBy')) : null,

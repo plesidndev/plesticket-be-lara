@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Api\AuthController;
+use App\Http\Controllers\Api\EventTalentController;
+use App\Http\Controllers\Api\TalentController;
 use App\Http\Controllers\Api\BankController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CityController;
@@ -104,6 +106,32 @@ Route::middleware('auth:api')->prefix('orders')->group(function () {
     Route::get('/{orderNumber}',          [OrderController::class, 'show']);
     Route::post('/{orderNumber}/pay',     [OrderController::class, 'pay']);
     Route::post('/{orderNumber}/cancel',  [OrderController::class, 'cancel']);
+});
+
+// Talents — public directory
+Route::get('/talents', [TalentController::class, 'index']);
+Route::get('/talents/{id}', [TalentController::class, 'show']);
+
+// Talents — authenticated EO can submit/update/delete own
+Route::middleware('auth:api')->group(function () {
+    Route::get('/talents/mine', [TalentController::class, 'mine']);
+    Route::post('/talents', [TalentController::class, 'store']);
+    Route::put('/talents/{id}', [TalentController::class, 'update']);
+    Route::delete('/talents/{id}', [TalentController::class, 'destroy']);
+});
+
+// Talents — Super Admin management
+Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('admin')->group(function () {
+    Route::get('/talents', [TalentController::class, 'adminIndex']);
+    Route::post('/talents/{id}/verify', [TalentController::class, 'verify']);
+});
+
+// Event lineup (talents per event) — authenticated EO manages, public can read
+Route::get('/events/{eventId}/talents', [EventTalentController::class, 'index']);
+Route::middleware('auth:api')->prefix('events/{eventId}/talents')->group(function () {
+    Route::post('/', [EventTalentController::class, 'store']);
+    Route::put('/{id}', [EventTalentController::class, 'update']);
+    Route::delete('/{id}', [EventTalentController::class, 'destroy']);
 });
 
 // Tickets — lookup open to any auth (buyer or organizer), scan organizer only

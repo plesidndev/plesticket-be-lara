@@ -70,7 +70,7 @@ class EventRepository implements EventRepositoryInterface
 
     public function findById(string $id): ?Event
     {
-        $query = Event::with(['user', 'verifiedBy', 'ticketTypes']);
+        $query = Event::with(['user', 'verifiedBy', 'ticketTypes', 'eventTalents.talent']);
 
         // UUID primary key vs event_id string (e.g. EVT0032)
         if (preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i', $id)) {
@@ -82,7 +82,7 @@ class EventRepository implements EventRepositoryInterface
 
     public function findBySlug(string $slug): ?Event
     {
-        return Event::with(['user', 'ticketTypes'])
+        return Event::with(['user', 'ticketTypes', 'eventTalents.talent'])
             ->where('slug', $slug)
             ->where('verification_status', 'verified')
             ->where('show_status', true)

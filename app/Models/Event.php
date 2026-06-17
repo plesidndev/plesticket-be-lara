@@ -77,4 +77,9 @@ class Event extends Model
     {
         return $this->hasMany(TicketType::class)->orderBy('price');
     }
+
+    public function eventTalents(): HasMany
+    {
+        return $this->hasMany(EventTalent::class)->orderBy('performance_order');
+    }
 }

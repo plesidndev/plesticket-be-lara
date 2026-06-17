@@ -38,5 +38,6 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(TicketTypeRepositoryInterface::class, TicketTypeRepository::class);
         $this->app->bind(OrderRepositoryInterface::class, OrderRepository::class);
         $this->app->bind(TicketRepositoryInterface::class, TicketRepository::class);
+        $this->app->bind(\App\Repositories\Contracts\TalentRepositoryInterface::class, \App\Repositories\TalentRepository::class);
     }
 }
