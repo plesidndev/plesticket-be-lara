@@ -18,6 +18,7 @@ class OrganizerMember extends Authenticatable implements JWTSubject
         'password',
         'role',
         'is_active',
+        'commission_rate',
     ];
 
     protected $hidden = ['password'];
@@ -25,9 +26,10 @@ class OrganizerMember extends Authenticatable implements JWTSubject
     protected function casts(): array
     {
         return [
-            'password'  => 'hashed',
-            'role'      => OrganizerRole::class,
-            'is_active' => 'boolean',
+            'password'        => 'hashed',
+            'role'            => OrganizerRole::class,
+            'is_active'       => 'boolean',
+            'commission_rate' => 'decimal:2',
         ];
     }
 
@@ -49,11 +51,12 @@ class OrganizerMember extends Authenticatable implements JWTSubject
     public function getJWTCustomClaims(): array
     {
         return [
-            'uid'      => $this->uid,
-            'name'     => $this->name,
-            'role'     => $this->role->value,
-            'event_id' => $this->event_id,
-            'guard'    => 'organizer',
+            'uid'             => $this->uid,
+            'name'            => $this->name,
+            'role'            => $this->role->value,
+            'event_id'        => $this->event_id,
+            'commission_rate' => (float) $this->commission_rate,
+            'guard'           => 'organizer',
         ];
     }
 }

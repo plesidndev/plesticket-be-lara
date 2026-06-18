@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use App\Models\OrganizerMember;
 
 class Order extends Model
 {
@@ -16,6 +17,10 @@ class Order extends Model
     protected $fillable = [
         'order_number',
         'buyer_id',
+        'agent_id',
+        'is_agent_sale',
+        'buyer_name',
+        'buyer_phone',
         'event_id',
         'status',
         'total_price',
@@ -27,16 +32,22 @@ class Order extends Model
     protected function casts(): array
     {
         return [
-            'status'      => OrderStatus::class,
-            'total_price' => 'decimal:2',
-            'paid_at'     => 'datetime',
-            'expires_at'  => 'datetime',
+            'status'        => OrderStatus::class,
+            'total_price'   => 'decimal:2',
+            'paid_at'       => 'datetime',
+            'expires_at'    => 'datetime',
+            'is_agent_sale' => 'boolean',
         ];
     }
 
     public function buyer(): BelongsTo
     {
         return $this->belongsTo(User::class, 'buyer_id');
+    }
+
+    public function agent(): BelongsTo
+    {
+        return $this->belongsTo(OrganizerMember::class, 'agent_id');
     }
 
     public function event(): BelongsTo

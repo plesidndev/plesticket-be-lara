@@ -44,9 +44,9 @@ Legend: ✅ Done · ⚠️ Partial · ❌ Not yet · 📱 Separate project
 
 | # | Feature | Status | Notes |
 |---|---------|--------|-------|
-| 12 | Ticket box = agen | ❌ Not yet | `OrganizerRole::MitraTicketBox` sudah ada · tapi belum ada logika penjualan agen |
-| 13 | Agen dapat potongan (commission %) yang di-set EO | ❌ Not yet | Perlu kolom `commission_rate` di `organizer_members` + tracking order via agen |
-| 14 | Akun agen dibuat di dashboard EO | ⚠️ Partial | `OrganizerMemberController` sudah bisa buat member dengan role apa pun · belum ada UI khusus agen + set komisi |
+| 12 | Ticket box = agen | ✅ Done | `POST /api/agent/orders` — agen buat order langsung (cash, paid instantly) · buyer_name + buyer_phone dicatat · tiket di-generate otomatis |
+| 13 | Agen dapat potongan (commission %) yang di-set EO | ✅ Done | Kolom `commission_rate` di `organizer_members` · masuk JWT · `GET /api/agent/summary` return commission_earned |
+| 14 | Akun agen dibuat di dashboard EO | ✅ Done | `POST /api/events/{eventId}/members` support `commission_rate` · full CRUD via `OrganizerMemberController` |
 
 ---
 
@@ -73,11 +73,11 @@ Legend: ✅ Done · ⚠️ Partial · ❌ Not yet · 📱 Separate project
 
 | Status | Count |
 |--------|-------|
-| ✅ Done | 9 |
-| ⚠️ Partial | 4 |
-| ❌ Not yet | 5 |
+| ✅ Done | 14 |
+| ⚠️ Partial | 3 |
+| ❌ Not yet | 3 |
 | 📱 Separate project | 2 |
-| **Total** | **20** |
+| **Total** | **22** |
 
 ---
 
@@ -86,5 +86,4 @@ Legend: ✅ Done · ⚠️ Partial · ❌ Not yet · 📱 Separate project
 1. ❌ Cross-order max 10 tiket per email per event (`OrderService::create`)
 2. ❌ Tiket kirim ke email (Mailable + queue)
 3. ❌ Payment gateway Xendit/Midtrans + waiting payment state + webhook
-4. ❌ Agen commission system (`commission_rate` + order tracking)
-5. ⚠️ QR camera scanner di browser scanner page
+4. ⚠️ QR camera scanner di browser scanner page

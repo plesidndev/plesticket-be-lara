@@ -18,10 +18,11 @@ class AddMemberRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'     => ['required', 'string', 'max:255'],
-            'email'    => ['nullable', 'email', 'max:100'],
-            'password' => ['required', 'string', 'min:8'],
-            'role'     => ['required', new Enum(OrganizerRole::class)],
+            'name'            => ['required', 'string', 'max:255'],
+            'email'           => ['nullable', 'email', 'max:100'],
+            'password'        => ['required', 'string', 'min:8'],
+            'role'            => ['required', new Enum(OrganizerRole::class)],
+            'commission_rate' => ['nullable', 'numeric', 'min:0', 'max:100'],
         ];
     }
 

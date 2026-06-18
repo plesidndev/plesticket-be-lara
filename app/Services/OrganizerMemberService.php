@@ -40,9 +40,9 @@ class OrganizerMemberService
 
     public function list(string $eventId, int $userId, int $perPage = 15): LengthAwarePaginator
     {
-        $this->resolveEvent($eventId, $userId);
+        $event = $this->resolveEvent($eventId, $userId);
 
-        return $this->members->paginate($eventId, $perPage);
+        return $this->members->paginate($event->id, $perPage);
     }
 
     public function add(string $eventId, int $userId, array $data): OrganizerMember
@@ -51,27 +51,28 @@ class OrganizerMemberService
 
         OrganizerRole::from($data['role']);
 
-        if ($data['email'] && $this->members->findByEmail($eventId, $data['email'])) {
+        if ($data['email'] && $this->members->findByEmail($event->id, $data['email'])) {
             throw new InvalidArgumentException('A member with this email already exists for this event.');
         }
 
         return $this->members->create([
-            'owner_id'   => $userId,
-            'event_id'   => $event->id,
-            'event_code' => $event->event_id,
-            'name'       => $data['name'],
-            'email'      => $data['email'] ?? null,
-            'password'   => $data['password'],
-            'role'       => OrganizerRole::from($data['role']),
-            'is_active'  => true,
+            'owner_id'        => $userId,
+            'event_id'        => $event->id,
+            'event_code'      => $event->event_id,
+            'name'            => $data['name'],
+            'email'           => $data['email'] ?? null,
+            'password'        => $data['password'],
+            'role'            => OrganizerRole::from($data['role']),
+            'is_active'       => true,
+            'commission_rate' => $data['commission_rate'] ?? 0,
         ]);
     }
 
     public function update(string $eventId, int $userId, int $memberId, array $data): OrganizerMember
     {
-        $this->resolveEvent($eventId, $userId);
+        $event = $this->resolveEvent($eventId, $userId);
 
-        $member = $this->members->findById($eventId, $memberId);
+        $member = $this->members->findById($event->id, $memberId);
 
         if (! $member) {
             throw new RuntimeException('Member not found.');
@@ -86,9 +87,9 @@ class OrganizerMemberService
 
     public function remove(string $eventId, int $userId, int $memberId): void
     {
-        $this->resolveEvent($eventId, $userId);
+        $event = $this->resolveEvent($eventId, $userId);
 
-        $member = $this->members->findById($eventId, $memberId);
+        $member = $this->members->findById($event->id, $memberId);
 
         if (! $member) {
             throw new RuntimeException('Member not found.');

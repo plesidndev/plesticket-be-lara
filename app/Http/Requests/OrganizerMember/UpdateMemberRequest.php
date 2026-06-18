@@ -18,11 +18,12 @@ class UpdateMemberRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'      => ['sometimes', 'string', 'max:255'],
-            'email'     => ['sometimes', 'nullable', 'email', 'max:100'],
-            'password'  => ['sometimes', 'string', 'min:8'],
-            'role'      => ['sometimes', new Enum(OrganizerRole::class)],
-            'is_active' => ['sometimes', 'boolean'],
+            'name'            => ['sometimes', 'string', 'max:255'],
+            'email'           => ['sometimes', 'nullable', 'email', 'max:100'],
+            'password'        => ['sometimes', 'string', 'min:8'],
+            'role'            => ['sometimes', new Enum(OrganizerRole::class)],
+            'is_active'       => ['sometimes', 'boolean'],
+            'commission_rate' => ['sometimes', 'numeric', 'min:0', 'max:100'],
         ];
     }
 

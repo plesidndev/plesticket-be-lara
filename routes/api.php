@@ -1,5 +1,9 @@
 <?php
 
+use App\Http\Controllers\Api\AgentEventController;
+use App\Http\Controllers\Api\AgentOrderController;
+use App\Http\Controllers\Api\AgentSummaryController;
+use App\Http\Controllers\Api\EoAgentController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\EventTalentController;
 use App\Http\Controllers\Api\TalentController;
@@ -99,6 +103,14 @@ Route::middleware('auth:api')->prefix('events/{eventId}/members')->group(functio
     Route::delete('/{memberId}', [OrganizerMemberController::class, 'destroy']);
 });
 
+// EO agent sales tracking — scoped per event, owner only
+Route::middleware('auth:api')->prefix('events/{eventId}/agents')->group(function () {
+    Route::get('/orders',                    [EoAgentController::class, 'orders']);
+    Route::get('/summary',                   [EoAgentController::class, 'summary']);
+    Route::get('/{agentId}/orders',          [EoAgentController::class, 'agentOrders']);
+    Route::get('/{agentId}/summary',         [EoAgentController::class, 'agentSummary']);
+});
+
 // Orders — authenticated buyer
 Route::middleware('auth:api')->prefix('orders')->group(function () {
     Route::get('/',                       [OrderController::class, 'index']);
@@ -137,3 +149,13 @@ Route::middleware('auth:api')->prefix('events/{eventId}/talents')->group(functio
 // Tickets — lookup open to any auth (buyer or organizer), scan organizer only
 Route::get('/tickets/{code}',       [TicketController::class, 'show'])->middleware('auth:api');
 Route::post('/tickets/{code}/scan', [TicketController::class, 'scan'])->middleware('auth:organizer');
+
+// Agent (Mitra Ticket Box) portal
+Route::middleware(['auth:organizer', 'role:MITRA_TICKET_BOX'])->prefix('agent')->group(function () {
+    Route::get('/event',              [AgentEventController::class, 'show']);
+    Route::get('/event/ticket-types', [AgentEventController::class, 'ticketTypes']);
+    Route::get('/orders',             [AgentOrderController::class, 'index']);
+    Route::post('/orders',            [AgentOrderController::class, 'store']);
+    Route::get('/orders/{orderNumber}', [AgentOrderController::class, 'show']);
+    Route::get('/summary',            AgentSummaryController::class);
+});
