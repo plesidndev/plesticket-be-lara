@@ -41,9 +41,10 @@ class OrganizerMemberRepository implements OrganizerMemberRepositoryInterface
     {
         $member   = OrganizerMember::create($data);
         $sequence = $this->countByEvent($data['event_id']);
+        $prefix   = $data['role']->prefix();
 
-        // UID: {human-readable event_id}-{sequence:04d} e.g. EVT0001-0001
-        $member->update(['uid' => sprintf('%s-%04d', $data['event_code'], $sequence)]);
+        // UID: {event_code}-{role_prefix}-{sequence:04d} e.g. EVT0001-AGT-0001
+        $member->update(['uid' => sprintf('%s-%s-%04d', $data['event_code'], $prefix, $sequence)]);
 
         return $member->fresh();
     }

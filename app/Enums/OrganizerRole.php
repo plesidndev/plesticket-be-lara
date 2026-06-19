@@ -22,4 +22,16 @@ enum OrganizerRole: string
             self::Sponsor        => 'Sponsor',
         };
     }
+
+    public function prefix(): string
+    {
+        return match($this) {
+            self::EoStaff        => 'STF',
+            self::GateOfficer    => 'GTE',
+            self::MitraTicketBox => 'AGT',
+            self::Band           => 'BND',
+            self::Media          => 'MDA',
+            self::Sponsor        => 'SPN',
+        };
+    }
 }
