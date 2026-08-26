@@ -26,6 +26,7 @@ class DummyEventSeeder extends Seeder
                     'phone' => '081234567890',
                     'password' => 'password123',
                     'role' => UserRole::RegisteredUser,
+                    'is_organizer' => true,
                     'is_active' => true,
                 ],
             );

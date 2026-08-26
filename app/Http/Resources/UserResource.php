@@ -20,6 +20,7 @@ class UserResource extends JsonResource
             'photo'         => $this->photo ? asset('storage/' . $this->photo) : null,
             'role'          => $this->role->value,
             'role_label'    => $this->role->label(),
+            'is_organizer'  => (bool) $this->is_organizer,
             'is_active'     => $this->is_active,
             'created_at'    => $this->created_at,
         ];

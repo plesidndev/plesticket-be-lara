@@ -71,9 +71,28 @@ OrganizerRole::Media          // 'MEDIA'
 OrganizerRole::Sponsor        // 'SPONSOR'
 ```
 
+### Buyer vs. EO — one account, two hats
+`users.is_organizer` is a **flag, not a role**: the same account can organise
+events and buy tickets to someone else's. `UserRole` stays two-valued
+(`SUPER_ADMIN`, `REGISTERED_USER`).
+
+- Activate with `POST /api/eo/activate` (self-serve, idempotent). It returns a
+  **replacement token** — the caller's existing JWT claims `is_organizer:false`
+  and would be refused until it expired. Clients must swap it in.
+- Gate EO-only routes with the `eo` middleware:
+  `Route::middleware(['auth:api', 'eo'])`
+- The JWT and `UserResource` both carry `is_organizer`, so a frontend can gate
+  without an extra call.
+- A refusal returns **403** with `errors.code = EO_NOT_ACTIVATED`, so the EO
+  frontend can route to onboarding instead of showing a permission error.
+
+**Naming:** the middleware is `eo`, never `organizer` — in this codebase
+"organizer" already means `organizer_members` (the staff an EO hires, on the
+`auth:organizer` guard). An EO is a `users` row with `is_organizer = true`.
+
 ### User flow
-1. User registers → `REGISTERED_USER`
-2. User creates an event
+1. User registers → `REGISTERED_USER`, `is_organizer = false`
+2. User activates EO access, then creates an event
 3. `SUPER_ADMIN` verifies the event
 4. Verified event owner adds organizer members via API (with name, password, role)
 5. Organizer members login at `POST /api/organizer-auth/login` using `uid` + `password`

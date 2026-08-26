@@ -22,6 +22,7 @@ class User extends Authenticatable implements JWTSubject
         'photo',
         'password',
         'role',
+        'is_organizer',
         'is_active',
     ];
 
@@ -30,12 +31,21 @@ class User extends Authenticatable implements JWTSubject
         'remember_token',
     ];
 
+    /**
+     * Mirrors the column default so a freshly created instance reads `false`
+     * rather than null before it is re-read from the database.
+     */
+    protected $attributes = [
+        'is_organizer' => false,
+    ];
+
     protected function casts(): array
     {
         return [
             'password'      => 'hashed',
             'role'          => UserRole::class,
             'is_active'     => 'boolean',
+            'is_organizer'  => 'boolean',
             'date_of_birth' => 'date',
         ];
     }
@@ -52,6 +62,9 @@ class User extends Authenticatable implements JWTSubject
             'name' => $this->name,
             'email'=> $this->email,
             'role' => $this->role->value,
+            // Lets the EO frontend gate without a round trip. Stale by nature:
+            // activation issues a fresh token so the claim keeps up.
+            'is_organizer' => (bool) $this->is_organizer,
         ];
     }
 }

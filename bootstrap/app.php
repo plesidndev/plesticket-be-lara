@@ -21,6 +21,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->redirectGuestsTo(fn () => null);
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
+            'eo'   => \App\Http\Middleware\EnsureIsOrganizer::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

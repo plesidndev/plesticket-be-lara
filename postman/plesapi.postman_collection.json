@@ -318,6 +318,36 @@
             },
             "url": "{{base_url}}/profile/photo"
           }
+        },
+        {
+          "name": "Activate Organizer Access",
+          "auth": {
+            "type": "bearer",
+            "bearer": [
+              {
+                "key": "token",
+                "value": "{{platform_token}}",
+                "type": "string"
+              }
+            ]
+          },
+          "request": {
+            "method": "POST",
+            "url": "{{base_url}}/eo/activate",
+            "description": "Turns the signed-in account into an event organizer. Returns a REPLACEMENT token - the old one still claims is_organizer:false and will be refused by EO routes. The test script swaps it in automatically."
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "// Swap in the replacement token, or EO routes keep returning 403.",
+                  "if (json.data && json.data.token) pm.collectionVariables.set('platform_token', json.data.token);"
+                ]
+              }
+            }
+          ]
         }
       ]
     },

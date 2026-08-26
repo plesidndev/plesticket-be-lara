@@ -10,6 +10,7 @@ use App\Http\Controllers\Api\TalentController;
 use App\Http\Controllers\Api\BankController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CityController;
+use App\Http\Controllers\Api\EoAccountController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\PaymentController;
@@ -39,6 +40,10 @@ Route::prefix('auth')->group(function () {
 Route::middleware('auth:api')->prefix('profile')->group(function () {
     Route::post('/photo', [ProfileController::class, 'uploadPhoto']);
 });
+
+// Becoming an event organizer. Only auth:api — the caller is by definition not
+// an EO yet. Returns a replacement token carrying the updated claim.
+Route::middleware('auth:api')->post('/eo/activate', [EoAccountController::class, 'activate']);
 
 // Organizer member auth (EO_STAFF, GATE_OFFICER, etc.)
 Route::prefix('organizer-auth')->group(function () {
@@ -76,8 +81,8 @@ Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('users')->group(func
 // Events — public
 Route::get('/events', [EventController::class, 'index']);
 
-// Events — authenticated user (must be before /{slug} to avoid conflict)
-Route::middleware('auth:api')->group(function () {
+// Events — organizer only (must be before /{slug} to avoid conflict)
+Route::middleware(['auth:api', 'eo'])->group(function () {
     Route::get('/events/my',       [EventController::class, 'myEvents']);
     Route::post('/events',         [EventController::class, 'store']);
     Route::post('/events/{id}',          [EventController::class, 'update']);
@@ -99,7 +104,7 @@ Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('admin')->group(func
 });
 
 // Organizer member management — scoped per event, owner only
-Route::middleware('auth:api')->prefix('events/{eventId}/members')->group(function () {
+Route::middleware(['auth:api', 'eo'])->prefix('events/{eventId}/members')->group(function () {
     Route::get('/',              [OrganizerMemberController::class, 'index']);
     Route::post('/',             [OrganizerMemberController::class, 'store']);
     Route::put('/{memberId}',    [OrganizerMemberController::class, 'update']);
@@ -107,7 +112,7 @@ Route::middleware('auth:api')->prefix('events/{eventId}/members')->group(functio
 });
 
 // EO agent sales tracking — scoped per event, owner only
-Route::middleware('auth:api')->prefix('events/{eventId}/agents')->group(function () {
+Route::middleware(['auth:api', 'eo'])->prefix('events/{eventId}/agents')->group(function () {
     Route::get('/orders',                    [EoAgentController::class, 'orders']);
     Route::get('/summary',                   [EoAgentController::class, 'summary']);
     Route::get('/{agentId}/orders',          [EoAgentController::class, 'agentOrders']);
@@ -135,7 +140,7 @@ Route::get('/talents', [TalentController::class, 'index']);
 Route::get('/talents/{id}', [TalentController::class, 'show']);
 
 // Talents — authenticated EO can submit/update/delete own
-Route::middleware('auth:api')->group(function () {
+Route::middleware(['auth:api', 'eo'])->group(function () {
     Route::get('/talents/mine', [TalentController::class, 'mine']);
     Route::post('/talents', [TalentController::class, 'store']);
     Route::put('/talents/{id}', [TalentController::class, 'update']);
@@ -150,7 +155,7 @@ Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('admin')->group(func
 
 // Event lineup (talents per event) — authenticated EO manages, public can read
 Route::get('/events/{eventId}/talents', [EventTalentController::class, 'index']);
-Route::middleware('auth:api')->prefix('events/{eventId}/talents')->group(function () {
+Route::middleware(['auth:api', 'eo'])->prefix('events/{eventId}/talents')->group(function () {
     Route::post('/', [EventTalentController::class, 'store']);
     Route::put('/{id}', [EventTalentController::class, 'update']);
     Route::delete('/{id}', [EventTalentController::class, 'destroy']);
