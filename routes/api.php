@@ -12,6 +12,8 @@ use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CityController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\OrderController;
+use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\Webhook\XenditWebhookController;
 use App\Http\Controllers\Api\OrganizerAuthController;
 use App\Http\Controllers\Api\OrganizerMemberController;
 use App\Http\Controllers\Api\ProfileController;
@@ -52,6 +54,7 @@ Route::get('/provinces',  [ProvinceController::class, 'index']);
 Route::get('/cities',     [CityController::class, 'index']);
 Route::get('/banks',      [BankController::class, 'index']);
 Route::get('/categories', [CategoryController::class, 'index']);
+Route::get('/payment-methods', [PaymentController::class, 'methods']);
 
 // Categories — Super Admin CRUD
 Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('admin')->group(function () {
@@ -118,7 +121,14 @@ Route::middleware('auth:api')->prefix('orders')->group(function () {
     Route::get('/{orderNumber}',          [OrderController::class, 'show']);
     Route::post('/{orderNumber}/pay',     [OrderController::class, 'pay']);
     Route::post('/{orderNumber}/cancel',  [OrderController::class, 'cancel']);
+
+    // Gateway checkout: create the charge, then poll it while the buyer pays.
+    Route::post('/{orderNumber}/payments', [PaymentController::class, 'store']);
+    Route::get('/{orderNumber}/payments',  [PaymentController::class, 'show']);
 });
+
+// Payment gateway callbacks — no auth: verified by provider callback token.
+Route::post('/webhooks/xendit', XenditWebhookController::class);
 
 // Talents — public directory
 Route::get('/talents', [TalentController::class, 'index']);
