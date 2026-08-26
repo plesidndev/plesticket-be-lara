@@ -68,10 +68,19 @@ php artisan db:seed                           # all seeders
 php artisan db:seed --class=SuperAdminSeeder  # superadmin@plesticket.com / adminpass
 php artisan db:seed --class=ProvinceSeeder
 php artisan db:seed --class=CitySeeder
-php artisan db:seed --class=DummyEventSeeder   # 5 purchasable Sep/Oct 2026 demo events
+php artisan db:seed --class=DummyEventSeeder   # demo accounts + 5 purchasable Sep/Oct 2026 events
 ```
 
-Dummy purchase credentials: `buyer.demo@plesticket.com` / `password123`.
+Demo credentials:
+
+| Account | Login | Password | Endpoint |
+|---------|-------|----------|----------|
+| EO owner | `organizer.demo@plesticket.com` | `password123` | `POST /api/auth/login` |
+| EO staff (Jakarta Music Fest) | `EVT9001-STF-0001` | `password123` | `POST /api/organizer-auth/login` |
+| Buyer | `buyer.demo@plesticket.com` | `password123` | `POST /api/auth/login` |
+| Super admin | `superadmin@plesticket.com` | `adminpass` | `POST /api/auth/login` |
+
+The EO owner is already activated as an organizer. The EO staff account is scoped to the verified `EVT9001` demo event.
 
 ## Roles
 

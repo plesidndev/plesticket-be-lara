@@ -3,9 +3,11 @@
 namespace Database\Seeders;
 
 use App\Enums\IdentityType;
+use App\Enums\OrganizerRole;
 use App\Enums\UserRole;
 use App\Enums\VerificationStatus;
 use App\Models\Event;
+use App\Models\OrganizerMember;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -185,6 +187,22 @@ class DummyEventSeeder extends Seeder
                             'sale_start' => '2026-08-01 00:00:00',
                             'sale_end' => $eventData['start_date'] . ' 23:59:59',
                         ]),
+                    );
+                }
+
+                if ($eventData['event_id'] === 'EVT9001') {
+                    OrganizerMember::updateOrCreate(
+                        ['uid' => 'EVT9001-STF-0001'],
+                        [
+                            'owner_id' => $organizer->id,
+                            'event_id' => $event->id,
+                            'name' => 'Ples Demo EO Staff',
+                            'email' => 'eo.staff.demo@plesticket.com',
+                            'password' => 'password123',
+                            'role' => OrganizerRole::EoStaff,
+                            'is_active' => true,
+                            'commission_rate' => 0,
+                        ],
                     );
                 }
             }
