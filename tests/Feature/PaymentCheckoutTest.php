@@ -78,21 +78,35 @@ class PaymentCheckoutTest extends TestCase
                 'payment_request_id' => 'pr_test_1',
                 'reference_id'       => 'ORD202608260001-AB12CD',
                 'currency'           => 'IDR',
-                'amount'             => 300000,
+                'request_amount'     => 300000,
                 'status'             => 'REQUIRES_ACTION',
-                'payment_method'     => [
-                    'id'      => 'pm_test_1',
-                    'type'    => 'QR_CODE',
-                    'qr_code' => [
-                        'channel_code'       => 'QRIS',
-                        'channel_properties' => [
-                            'qr_string'  => '00020101021226650013ID.CO.QRIS.WWW',
-                            'expires_at' => now()->addMinutes(30)->toIso8601ZuluString(),
-                        ],
-                    ],
+                'channel_code'       => 'QRIS',
+                'channel_properties' => [
+                    'expires_at' => now()->addMinutes(30)->toIso8601ZuluString(),
                 ],
+                'actions' => [[
+                    'type'       => 'PRESENT_TO_CUSTOMER',
+                    'descriptor' => 'QR_STRING',
+                    'value'      => '00020101021226650013ID.CO.QRIS.WWW',
+                ]],
             ], 201),
         ]);
+    }
+
+    /**
+     * Xendit answers "API version in header is required" without this, so the
+     * header is asserted explicitly rather than assumed.
+     */
+    public function test_every_xendit_call_carries_the_api_version_header(): void
+    {
+        config()->set('services.xendit.api_version', '2024-11-11');
+        $this->fakeQrSuccess();
+
+        $this->actingAs($this->buyer, 'api')
+            ->postJson("/api/orders/{$this->order->order_number}/payments", ['method_code' => 'qris'])
+            ->assertCreated();
+
+        Http::assertSent(fn($request) => $request->hasHeader('api-version', '2024-11-11'));
     }
 
     public function test_payment_methods_lists_only_enabled_methods_grouped_by_type(): void
@@ -128,12 +142,11 @@ class PaymentCheckoutTest extends TestCase
             return $request->url() === 'https://api.xendit.co/v3/payment_requests'
                 && $body['type'] === 'PAY'
                 && $body['currency'] === 'IDR'
-                && $body['payment_method']['type'] === 'QR_CODE'
-                && $body['payment_method']['reusability'] === 'ONE_TIME_USE'
-                && $body['payment_method']['qr_code']['channel_code'] === 'QRIS'
+                && $body['channel_code'] === 'QRIS'
                 // IDR has no minor unit — the amount must go out as an integer.
-                && $body['amount'] === 300000
-                && is_int($body['amount'])
+                && $body['request_amount'] === 300000
+                && is_int($body['request_amount'])
+                && ! isset($body['payment_method'])
                 && str_starts_with($body['reference_id'], 'ORD202608260001-');
         });
 
@@ -143,7 +156,7 @@ class PaymentCheckoutTest extends TestCase
             'provider'           => 'xendit',
             'status'                    => 'pending',
             'provider_reference'        => 'pr_test_1',
-            'provider_method_reference' => 'pm_test_1',
+            'provider_method_reference' => null,
         ]);
     }
 

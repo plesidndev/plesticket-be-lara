@@ -54,6 +54,7 @@ class RepositoryServiceProvider extends ServiceProvider
             callbackToken: config('services.xendit.callback_token'),
             baseUrl:       config('services.xendit.base_url'),
             timeout:       (int) config('services.xendit.timeout'),
+            apiVersion:    (string) config('services.xendit.api_version'),
         ));
     }
 }

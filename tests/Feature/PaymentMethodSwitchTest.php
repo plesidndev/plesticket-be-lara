@@ -91,44 +91,37 @@ class PaymentMethodSwitchTest extends TestCase
         $sequence = 0;
 
         Http::fake([
-            'api.xendit.co/v3/payment_methods/*/expire' => Http::response([
-                'id'     => 'pm_expired',
-                'status' => 'EXPIRED',
+            'api.xendit.co/v3/payment_requests/*/cancel' => Http::response([
+                'payment_request_id' => 'pr_cancelled',
+                'status'             => 'CANCELED',
             ], 200),
 
             'api.xendit.co/v3/payment_requests' => function ($request) use (&$sequence) {
                 $sequence++;
-                $type = $request->data()['payment_method']['type'];
+                $channel = $request->data()['channel_code'];
 
-                if ($type === 'QR_CODE') {
+                if ($channel === 'QRIS') {
                     return Http::response([
                         'payment_request_id' => "pr_qris_{$sequence}",
                         'status'             => 'REQUIRES_ACTION',
-                        'payment_method'     => [
-                            'id'      => "pm_qris_{$sequence}",
-                            'type'    => 'QR_CODE',
-                            'qr_code' => [
-                                'channel_properties' => [
-                                    'qr_string' => '00020101021226650013ID.CO.QRIS.WWW',
-                                ],
-                            ],
-                        ],
+                        'channel_code'       => 'QRIS',
+                        'actions'            => [[
+                            'type'       => 'PRESENT_TO_CUSTOMER',
+                            'descriptor' => 'QR_STRING',
+                            'value'      => '00020101021226650013ID.CO.QRIS.WWW',
+                        ]],
                     ], 201);
                 }
 
                 return Http::response([
                     'payment_request_id' => "pr_va_{$sequence}",
                     'status'             => 'REQUIRES_ACTION',
-                    'payment_method'     => [
-                        'id'              => "pm_va_{$sequence}",
-                        'type'            => 'VIRTUAL_ACCOUNT',
-                        'virtual_account' => [
-                            'channel_code'       => 'BRI',
-                            'channel_properties' => [
-                                'virtual_account_number' => '8808123456789',
-                            ],
-                        ],
-                    ],
+                    'channel_code'       => 'BRI_VIRTUAL_ACCOUNT',
+                    'actions'            => [[
+                        'type'       => 'PRESENT_TO_CUSTOMER',
+                        'descriptor' => 'VIRTUAL_ACCOUNT_NUMBER',
+                        'value'      => '8808123456789',
+                    ]],
                 ], 201);
             },
         ]);
@@ -206,7 +199,7 @@ class PaymentMethodSwitchTest extends TestCase
         $this->pay('qris')->assertCreated();
 
         Http::assertSent(fn($request) => $request->method() === 'POST'
-            && str_contains($request->url(), '/v3/payment_methods/pm_va_1/expire'));
+            && str_contains($request->url(), '/v3/payment_requests/pr_va_1/cancel'));
 
         $this->assertSame(
             PaymentStatus::Cancelled,
@@ -226,7 +219,7 @@ class PaymentMethodSwitchTest extends TestCase
         $this->pay('bri_va')->assertCreated();
 
         Http::assertSent(fn($request) => $request->method() === 'POST'
-            && str_contains($request->url(), '/v3/payment_methods/pm_qris_1/expire'));
+            && str_contains($request->url(), '/v3/payment_requests/pr_qris_1/cancel'));
 
         $this->assertSame(
             PaymentStatus::Cancelled,
@@ -237,14 +230,14 @@ class PaymentMethodSwitchTest extends TestCase
     public function test_a_provider_that_cannot_retract_still_lets_the_switch_through(): void
     {
         Http::fake([
-            'api.xendit.co/v3/payment_methods/*/expire' => Http::response(['message' => 'nope'], 500),
+            'api.xendit.co/v3/payment_requests/*/cancel' => Http::response(['message' => 'nope'], 500),
             'api.xendit.co/v3/payment_requests' => Http::response([
                 'payment_request_id' => 'pr_1',
-                'payment_method'     => [
-                    'id'              => 'pm_1',
-                    'qr_code'         => ['channel_properties' => ['qr_string' => 'QR']],
-                    'virtual_account' => ['channel_properties' => ['virtual_account_number' => '8808123456789']],
-                ],
+                'actions' => [[
+                    'type'       => 'PRESENT_TO_CUSTOMER',
+                    'descriptor' => 'QR_STRING',
+                    'value'      => 'QR',
+                ]],
             ], 201),
         ]);
 

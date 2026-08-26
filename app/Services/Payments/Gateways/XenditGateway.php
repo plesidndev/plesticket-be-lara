@@ -19,11 +19,9 @@ use Illuminate\Support\Facades\Log;
 /**
  * Xendit via the Payment Requests API.
  *
- * Every instrument is created the same way — a payment request carrying a
- * `payment_method` block — and every instrument is retracted the same way, by
- * expiring its payment method. That uniformity is the reason for using this API
- * over the older per-instrument endpoints: it is what makes a QRIS charge
- * cancellable when a buyer switches payment method.
+ * Every instrument is created as a v3 Payment Request using a top-level
+ * `channel_code`. The resulting payment request can also be cancelled when a
+ * buyer switches methods.
  *
  * VERIFY BEFORE GOING LIVE: the endpoint paths and the response field paths
  * marked below are the parts most likely to differ across Xendit API versions.
@@ -37,6 +35,7 @@ class XenditGateway implements PaymentGatewayInterface
         private readonly ?string $callbackToken = null,
         private readonly string $baseUrl = 'https://api.xendit.co',
         private readonly int    $timeout = 30,
+        private readonly string $apiVersion = '2024-11-11',
     ) {}
 
     public function createCharge(Payment $payment, PaymentMethod $method): ChargeResult
@@ -47,8 +46,8 @@ class XenditGateway implements PaymentGatewayInterface
             'country'        => 'ID',
             'currency'       => 'IDR',
             // IDR has no minor unit and Xendit rejects decimal amounts.
-            'amount'         => (int) round((float) $payment->amount),
-            'payment_method' => $this->paymentMethodBlock($payment, $method),
+            'request_amount' => (int) round((float) $payment->amount),
+            ...$this->paymentChannelFields($payment, $method),
         ], 'Failed to create payment.');
 
         return $this->toChargeResult($body);
@@ -57,29 +56,24 @@ class XenditGateway implements PaymentGatewayInterface
     /**
      * The instrument-specific half of the request body.
      */
-    private function paymentMethodBlock(Payment $payment, PaymentMethod $method): array
+    private function paymentChannelFields(Payment $payment, PaymentMethod $method): array
     {
         $expiresAt = $payment->expires_at?->toIso8601ZuluString();
 
         return match ($method->type) {
             PaymentType::Qris => [
-                'type'        => 'QR_CODE',
-                'reusability' => 'ONE_TIME_USE',
-                'qr_code'     => [
-                    'channel_code' => $method->channelCode ?? 'QRIS',
-                ],
+                'channel_code' => $method->channelCode ?? 'QRIS',
+                'channel_properties' => array_filter([
+                    'expires_at' => $expiresAt,
+                ]),
             ],
             PaymentType::VirtualAccount => [
-                'type'            => 'VIRTUAL_ACCOUNT',
-                'reusability'     => 'ONE_TIME_USE',
-                'virtual_account' => [
-                    'channel_code'       => $method->channelCode,
-                    'channel_properties' => [
-                        'customer_name' => $payment->order?->buyer?->name
-                            ?? $payment->order?->buyer_name
-                            ?? 'Plesticket',
-                        'expires_at'    => $expiresAt,
-                    ],
+                'channel_code' => $method->channelCode,
+                'channel_properties' => [
+                    'display_name' => $payment->order?->buyer?->name
+                        ?? $payment->order?->buyer_name
+                        ?? 'Plesticket',
+                    'expires_at' => $expiresAt,
                 ],
             ],
             default => throw new PaymentGatewayException(
@@ -89,51 +83,51 @@ class XenditGateway implements PaymentGatewayInterface
     }
 
     /**
-     * Flattens the payment request response into the shape the rest of the
-     * application speaks. VERIFY: the nesting of qr_string / account number
-     * under channel_properties is version-dependent, so both the nested and
-     * flat positions are checked.
+     * Flattens v3's standardised customer actions into the instruction shape
+     * used by the rest of the application.
      */
     private function toChargeResult(array $body): ChargeResult
     {
-        $method     = $body['payment_method'] ?? [];
-        $qr         = $method['qr_code'] ?? [];
-        $va         = $method['virtual_account'] ?? [];
-        $qrProps    = $qr['channel_properties'] ?? [];
-        $vaProps    = $va['channel_properties'] ?? [];
+        $actions = is_array($body['actions'] ?? null) ? $body['actions'] : [];
+        $qrString = $this->actionValue($actions, 'QR_STRING');
+        $accountNumber = $this->actionValue($actions, 'VIRTUAL_ACCOUNT_NUMBER')
+            ?? $this->actionValue($actions, 'PAYMENT_CODE');
+        $checkoutUrl = $this->actionValue($actions, 'WEB_URL')
+            ?? $this->actionValue($actions, 'DEEPLINK_URL');
 
-        $expiresAt = $qrProps['expires_at']
-            ?? $vaProps['expires_at']
+        $expiresAt = $body['channel_properties']['expires_at']
             ?? $body['expires_at']
             ?? null;
 
         return new ChargeResult(
-            // Webhooks quote the payment request...
             providerReference:       $body['payment_request_id'] ?? $body['id'] ?? null,
-            // ...but expiring a charge needs the payment method.
-            providerMethodReference: $method['id'] ?? null,
-            qrString:                $qrProps['qr_string'] ?? $qr['qr_string'] ?? null,
-            accountNumber:           $vaProps['virtual_account_number']
-                ?? $vaProps['account_number']
-                ?? $va['account_number']
-                ?? null,
+            providerMethodReference: null,
+            qrString:                $qrString,
+            accountNumber:           $accountNumber,
+            checkoutUrl:             $checkoutUrl,
             expiresAt:               $expiresAt ? Carbon::parse($expiresAt) : null,
             raw:                     $body,
         );
     }
 
+    private function actionValue(array $actions, string $descriptor): ?string
+    {
+        foreach ($actions as $action) {
+            if (($action['descriptor'] ?? null) === $descriptor && is_string($action['value'] ?? null)) {
+                return $action['value'];
+            }
+        }
+
+        return null;
+    }
+
     /**
-     * Expires the payment method, which retracts the instrument itself — a QR
-     * that can no longer be scanned, a VA that can no longer be transferred to.
-     *
-     * This is the capability the older QR Codes API lacked, and the reason
-     * switching payment method can now genuinely close the old charge instead
-     * of merely abandoning it.
+     * Cancels the payment request so its QR or VA can no longer be paid.
      */
     public function voidCharge(Payment $payment): void
     {
-        if (blank($payment->provider_method_reference)) {
-            Log::info('No Xendit payment method recorded; cancelling locally only.', [
+        if (blank($payment->provider_reference)) {
+            Log::info('No Xendit payment request recorded; cancelling locally only.', [
                 'reference_id' => $payment->reference_id,
             ]);
 
@@ -141,9 +135,9 @@ class XenditGateway implements PaymentGatewayInterface
         }
 
         $this->post(
-            '/v3/payment_methods/'.$payment->provider_method_reference.'/expire',
+            '/v3/payment_requests/'.$payment->provider_reference.'/cancel',
             [],
-            'Failed to expire payment method.',
+            'Failed to cancel payment request.',
         );
     }
 
@@ -237,6 +231,9 @@ class XenditGateway implements PaymentGatewayInterface
 
         try {
             $response = Http::withBasicAuth($this->secretKey, '')
+                // Required on every call — Xendit answers
+                // "API version in header is required" without it.
+                ->withHeaders(['api-version' => $this->apiVersion])
                 ->acceptJson()
                 ->timeout($this->timeout)
                 ->retry(2, 200, throw: false)
