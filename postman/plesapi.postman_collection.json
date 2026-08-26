@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "70316433-42e1-4aac-ae81-plesticketapi",
     "name": "PlesTicket API",
-    "description": "Complete collection for routes/api.php. Run Buyer Login, Organizer Login, or Super Admin Login before protected requests. IDs are collection variables and can be changed after importing.",
+    "description": "Complete collection for routes/api.php. Run Buyer Login, Organizer Owner Login, or Super Admin Login before protected requests. IDs are collection variables and can be changed after importing.\n\nEVENT ORGANIZER ROUTES: events, members, agents, talents and lineup now require an account with is_organizer = true. The seeded organizer.demo@plesticket.com already has it. A freshly registered account does NOT - run 'Activate Organizer Access' first, or those requests return 403 with errors.code = EO_NOT_ACTIVATED.\n\nORDER EXPIRY: unpaid orders are swept about every 5 minutes past their 30-minute hold, which releases their ticket quota. An order_number captured in an earlier session may have expired - create a new order rather than reusing a stale one.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -438,7 +438,8 @@
           "name": "My Events",
           "request": {
             "method": "GET",
-            "url": "{{base_url}}/events/my?limit=15"
+            "url": "{{base_url}}/events/my?limit=15",
+            "description": "Organizer-only. Returns 403 EO_NOT_ACTIVATED on a plain buyer account."
           }
         },
         {
@@ -455,7 +456,8 @@
               "mode": "raw",
               "raw": "{\n  \"title\": \"Postman Test Event 2026\",\n  \"slug\": \"postman-test-event-2026\",\n  \"description\": \"Created from Postman\",\n  \"category\": \"Music\",\n  \"pic_name\": \"Demo Organizer\",\n  \"pic_identity_type\": \"ktp\",\n  \"pic_identity_number\": \"3173000000000001\",\n  \"start_date\": \"2026-12-20\",\n  \"end_date\": \"2026-12-20\",\n  \"start_time\": \"10:00\",\n  \"end_time\": \"22:00\",\n  \"is_online\": false,\n  \"venue_name\": \"Postman Hall\",\n  \"address\": \"Jakarta\",\n  \"city\": \"Kota Jakarta Pusat\",\n  \"province\": \"DKI Jakarta\",\n  \"show_status\": true,\n  \"ticket_types\": [{\n    \"name\": \"General Admission\",\n    \"price\": 100000,\n    \"quota\": 100,\n    \"is_active\": true,\n    \"sale_start\": \"2026-08-01 00:00:00\",\n    \"sale_end\": \"2026-12-20 09:00:00\"\n  }]\n}"
             },
-            "url": "{{base_url}}/events"
+            "url": "{{base_url}}/events",
+            "description": "Requires an organizer account. If this returns 403 with errors.code = EO_NOT_ACTIVATED, run 'Activate Organizer Access' in Platform Authentication first."
           },
           "event": [
             {
@@ -799,7 +801,8 @@
               "mode": "raw",
               "raw": "{\n  \"event_id\": \"{{event_id}}\",\n  \"payment_method\": \"qris\",\n  \"items\": [{\n    \"ticket_type_id\": {{ticket_type_id}},\n    \"quantity\": 1\n  }]\n}"
             },
-            "url": "{{base_url}}/orders"
+            "url": "{{base_url}}/orders",
+            "description": "Creating an order reserves ticket quota immediately and holds it for 30 minutes. Leave it unpaid and the orders:expire sweeper releases the seats.\n\npayment_method is optional - include it to create the order and its charge in one call, or omit it and use 'Create QRIS Payment' separately."
           },
           "event": [
             {
