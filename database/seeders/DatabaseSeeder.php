@@ -14,6 +14,7 @@ class DatabaseSeeder extends Seeder
             CategorySeeder::class,
             ProvinceSeeder::class,
             CitySeeder::class,
+            DummyEventSeeder::class,
         ]);
     }
 }

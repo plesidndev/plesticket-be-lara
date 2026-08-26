@@ -1,0 +1,208 @@
+{
+  "info": {
+    "_postman_id": "70316433-42e1-4aac-ae81-plesticketapi",
+    "name": "PlesTicket API",
+    "description": "Complete collection for routes/api.php. Run Buyer Login, Organizer Login, or Super Admin Login before protected requests. IDs are collection variables and can be changed after importing.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{platform_token}}", "type": "string" }] },
+  "variable": [
+    { "key": "base_url", "value": "http://localhost:8000/api" },
+    { "key": "platform_token", "value": "" },
+    { "key": "organizer_token", "value": "" },
+    { "key": "event_id", "value": "EVT9001" },
+    { "key": "event_slug", "value": "jakarta-september-music-fest-2026" },
+    { "key": "ticket_type_id", "value": "1" },
+    { "key": "order_number", "value": "ORD-CHANGE-ME" },
+    { "key": "payment_reference", "value": "PAYMENT-REFERENCE-CHANGE-ME" },
+    { "key": "user_uid", "value": "USR-DEMO-BUYER" },
+    { "key": "category_id", "value": "1" },
+    { "key": "member_id", "value": "1" },
+    { "key": "agent_id", "value": "1" },
+    { "key": "organizer_uid", "value": "AGT0001" },
+    { "key": "talent_id", "value": "1" },
+    { "key": "lineup_id", "value": "1" },
+    { "key": "ticket_code", "value": "TKT-CHANGE-ME" },
+    { "key": "xendit_callback_token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "System & Public Catalogs",
+      "auth": { "type": "noauth" },
+      "item": [
+        { "name": "Health", "request": { "method": "GET", "url": "{{base_url}}/health" } },
+        { "name": "List Provinces", "request": { "method": "GET", "url": "{{base_url}}/provinces" } },
+        { "name": "List Cities", "request": { "method": "GET", "url": "{{base_url}}/cities?province_code=31&search=Jakarta" } },
+        { "name": "List Banks", "request": { "method": "GET", "url": "{{base_url}}/banks" } },
+        { "name": "List Categories", "request": { "method": "GET", "url": "{{base_url}}/categories" } },
+        { "name": "List Payment Methods", "request": { "method": "GET", "url": "{{base_url}}/payment-methods" } }
+      ]
+    },
+    {
+      "name": "Platform Authentication",
+      "auth": { "type": "noauth" },
+      "item": [
+        {
+          "name": "Register",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Buyer\",\n  \"username\": \"postman_buyer\",\n  \"email\": \"postman.buyer@example.com\",\n  \"password\": \"password123\",\n  \"password_confirmation\": \"password123\",\n  \"phone\": \"081234567890\",\n  \"date_of_birth\": \"1995-05-15\"\n}" }, "url": "{{base_url}}/auth/register" },
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data && json.data.token) pm.collectionVariables.set('platform_token', json.data.token);"] } }]
+        },
+        {
+          "name": "Buyer Login",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"buyer.demo@plesticket.com\",\n  \"password\": \"password123\"\n}" }, "url": "{{base_url}}/auth/login" },
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data && json.data.token) pm.collectionVariables.set('platform_token', json.data.token);"] } }]
+        },
+        {
+          "name": "Organizer Owner Login",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"organizer.demo@plesticket.com\",\n  \"password\": \"password123\"\n}" }, "url": "{{base_url}}/auth/login" },
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data && json.data.token) pm.collectionVariables.set('platform_token', json.data.token);"] } }]
+        },
+        {
+          "name": "Super Admin Login",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"email\": \"superadmin@plesticket.com\",\n  \"password\": \"adminpass\"\n}" }, "url": "{{base_url}}/auth/login" },
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data && json.data.token) pm.collectionVariables.set('platform_token', json.data.token);"] } }]
+        },
+        { "name": "Current User", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{platform_token}}", "type": "string" }] }, "request": { "method": "GET", "url": "{{base_url}}/auth/me" } },
+        { "name": "Logout", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{platform_token}}", "type": "string" }] }, "request": { "method": "POST", "url": "{{base_url}}/auth/logout" } },
+        { "name": "Upload Profile Photo", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{platform_token}}", "type": "string" }] }, "request": { "method": "POST", "body": { "mode": "formdata", "formdata": [{ "key": "photo", "type": "file", "src": [] }] }, "url": "{{base_url}}/profile/photo" } }
+      ]
+    },
+    {
+      "name": "Organizer Member Authentication",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{organizer_token}}", "type": "string" }] },
+      "item": [
+        {
+          "name": "Organizer Login",
+          "auth": { "type": "noauth" },
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"uid\": \"{{organizer_uid}}\",\n  \"password\": \"password123\"\n}" }, "url": "{{base_url}}/organizer-auth/login" },
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data && json.data.token) pm.collectionVariables.set('organizer_token', json.data.token);"] } }]
+        },
+        { "name": "Current Organizer Member", "request": { "method": "GET", "url": "{{base_url}}/organizer-auth/me" } },
+        { "name": "Organizer Logout", "request": { "method": "POST", "url": "{{base_url}}/organizer-auth/logout" } }
+      ]
+    },
+    {
+      "name": "Events",
+      "item": [
+        { "name": "List Public Events", "auth": { "type": "noauth" }, "request": { "method": "GET", "url": "{{base_url}}/events?limit=15&category=Music&city=Jakarta&sort=upcoming" } },
+        { "name": "Public Event by Slug", "auth": { "type": "noauth" }, "request": { "method": "GET", "url": "{{base_url}}/events/{{event_slug}}" } },
+        { "name": "My Events", "request": { "method": "GET", "url": "{{base_url}}/events/my?limit=15" } },
+        {
+          "name": "Create Event",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Postman Test Event 2026\",\n  \"slug\": \"postman-test-event-2026\",\n  \"description\": \"Created from Postman\",\n  \"category\": \"Music\",\n  \"pic_name\": \"Demo Organizer\",\n  \"pic_identity_type\": \"ktp\",\n  \"pic_identity_number\": \"3173000000000001\",\n  \"start_date\": \"2026-12-20\",\n  \"end_date\": \"2026-12-20\",\n  \"start_time\": \"10:00\",\n  \"end_time\": \"22:00\",\n  \"is_online\": false,\n  \"venue_name\": \"Postman Hall\",\n  \"address\": \"Jakarta\",\n  \"city\": \"Kota Jakarta Pusat\",\n  \"province\": \"DKI Jakarta\",\n  \"show_status\": true,\n  \"ticket_types\": [{\n    \"name\": \"General Admission\",\n    \"price\": 100000,\n    \"quota\": 100,\n    \"is_active\": true,\n    \"sale_start\": \"2026-08-01 00:00:00\",\n    \"sale_end\": \"2026-12-20 09:00:00\"\n  }]\n}" }, "url": "{{base_url}}/events" },
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "const data = json.data || {};", "if (data.event_id) pm.collectionVariables.set('event_id', data.event_id);", "if (data.slug) pm.collectionVariables.set('event_slug', data.slug);"] } }]
+        },
+        { "name": "Update Event (PUT)", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"title\": \"Updated Postman Event\",\n  \"show_status\": true\n}" }, "url": "{{base_url}}/events/{{event_id}}" } },
+        { "name": "Update Event (POST)", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"description\": \"Updated using POST for multipart compatibility\"\n}" }, "url": "{{base_url}}/events/{{event_id}}" } },
+        { "name": "Upload Event Banner", "request": { "method": "POST", "body": { "mode": "formdata", "formdata": [{ "key": "banner", "type": "file", "src": [] }] }, "url": "{{base_url}}/events/{{event_id}}/banner" } },
+        { "name": "Toggle Event", "request": { "method": "PATCH", "url": "{{base_url}}/events/{{event_id}}/toggle" } }
+      ]
+    },
+    {
+      "name": "Super Admin",
+      "item": [
+        { "name": "List Admin Categories", "request": { "method": "GET", "url": "{{base_url}}/admin/categories?limit=20" } },
+        { "name": "Create Category", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Category\",\n  \"is_active\": true\n}" }, "url": "{{base_url}}/admin/categories" } },
+        { "name": "Update Category", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Updated Category\",\n  \"is_active\": true\n}" }, "url": "{{base_url}}/admin/categories/{{category_id}}" } },
+        { "name": "Delete Category", "request": { "method": "DELETE", "url": "{{base_url}}/admin/categories/{{category_id}}" } },
+        { "name": "List Users", "request": { "method": "GET", "url": "{{base_url}}/users?limit=15&search=" } },
+        { "name": "Show User", "request": { "method": "GET", "url": "{{base_url}}/users/{{user_uid}}" } },
+        { "name": "Update User", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Updated User\",\n  \"is_active\": true\n}" }, "url": "{{base_url}}/users/{{user_uid}}" } },
+        { "name": "Delete User", "request": { "method": "DELETE", "url": "{{base_url}}/users/{{user_uid}}" } },
+        { "name": "List Admin Events", "request": { "method": "GET", "url": "{{base_url}}/admin/events?limit=15&verification_status=pending&search=" } },
+        { "name": "Show Admin Event", "request": { "method": "GET", "url": "{{base_url}}/admin/events/{{event_id}}" } },
+        { "name": "Verify Event", "request": { "method": "POST", "url": "{{base_url}}/admin/events/{{event_id}}/verify" } },
+        { "name": "Reject Event", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"reason\": \"Event details require correction.\"\n}" }, "url": "{{base_url}}/admin/events/{{event_id}}/reject" } },
+        { "name": "Suspend Event", "request": { "method": "POST", "url": "{{base_url}}/admin/events/{{event_id}}/suspend" } },
+        { "name": "List Admin Talents", "request": { "method": "GET", "url": "{{base_url}}/admin/talents?limit=20&is_verified=false&search=" } },
+        { "name": "Verify Talent", "request": { "method": "POST", "url": "{{base_url}}/admin/talents/{{talent_id}}/verify" } }
+      ]
+    },
+    {
+      "name": "Organizer Members & Sales",
+      "item": [
+        { "name": "List Members", "request": { "method": "GET", "url": "{{base_url}}/events/{{event_id}}/members?limit=15" } },
+        {
+          "name": "Add Member",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Ticket Agent\",\n  \"email\": \"agent.postman@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"MITRA_TICKET_BOX\",\n  \"commission_rate\": 5\n}" }, "url": "{{base_url}}/events/{{event_id}}/members" },
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "const data = json.data || {};", "if (data.id) { pm.collectionVariables.set('member_id', data.id); pm.collectionVariables.set('agent_id', data.id); }", "if (data.uid) pm.collectionVariables.set('organizer_uid', data.uid);"] } }]
+        },
+        { "name": "Update Member", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Updated Ticket Agent\",\n  \"commission_rate\": 7.5,\n  \"is_active\": true\n}" }, "url": "{{base_url}}/events/{{event_id}}/members/{{member_id}}" } },
+        { "name": "Delete Member", "request": { "method": "DELETE", "url": "{{base_url}}/events/{{event_id}}/members/{{member_id}}" } },
+        { "name": "All Agent Orders", "request": { "method": "GET", "url": "{{base_url}}/events/{{event_id}}/agents/orders?limit=15&search=" } },
+        { "name": "All Agents Summary", "request": { "method": "GET", "url": "{{base_url}}/events/{{event_id}}/agents/summary" } },
+        { "name": "Agent Orders", "request": { "method": "GET", "url": "{{base_url}}/events/{{event_id}}/agents/{{agent_id}}/orders?limit=15&search=" } },
+        { "name": "Agent Summary", "request": { "method": "GET", "url": "{{base_url}}/events/{{event_id}}/agents/{{agent_id}}/summary" } }
+      ]
+    },
+    {
+      "name": "Buyer Orders & Payments",
+      "item": [
+        { "name": "List Orders", "request": { "method": "GET", "url": "{{base_url}}/orders?limit=15" } },
+        {
+          "name": "Create Order",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"event_id\": \"{{event_id}}\",\n  \"payment_method\": \"qris\",\n  \"items\": [{\n    \"ticket_type_id\": {{ticket_type_id}},\n    \"quantity\": 1\n  }]\n}" }, "url": "{{base_url}}/orders" },
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "const data = json.data || {};", "const order = data.order || data;", "if (order.order_number) pm.collectionVariables.set('order_number', order.order_number);", "if (data.payment && data.payment.reference_id) pm.collectionVariables.set('payment_reference', data.payment.reference_id);"] } }]
+        },
+        { "name": "Show Order", "request": { "method": "GET", "url": "{{base_url}}/orders/{{order_number}}" } },
+        { "name": "Direct Pay Order", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"payment_method\": \"cash\"\n}" }, "url": "{{base_url}}/orders/{{order_number}}/pay" } },
+        { "name": "Cancel Order", "request": { "method": "POST", "url": "{{base_url}}/orders/{{order_number}}/cancel" } },
+        { "name": "Create QRIS Payment", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"method_code\": \"qris\"\n}" }, "url": "{{base_url}}/orders/{{order_number}}/payments" }, "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data && json.data.reference_id) pm.collectionVariables.set('payment_reference', json.data.reference_id);"] } }] },
+        { "name": "Get Current Payment", "request": { "method": "GET", "url": "{{base_url}}/orders/{{order_number}}/payments" } }
+      ]
+    },
+    {
+      "name": "Talents & Event Lineup",
+      "item": [
+        { "name": "List Public Talents", "auth": { "type": "noauth" }, "request": { "method": "GET", "url": "{{base_url}}/talents?limit=20&search=&type=group&category=music" } },
+        { "name": "Show Talent", "auth": { "type": "noauth" }, "request": { "method": "GET", "url": "{{base_url}}/talents/{{talent_id}}" } },
+        { "name": "My Talents", "request": { "method": "GET", "url": "{{base_url}}/talents/mine?limit=20&search=" } },
+        {
+          "name": "Create Talent",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Band\",\n  \"slug\": \"postman-band\",\n  \"type\": \"group\",\n  \"category\": \"band\",\n  \"genre\": \"Pop\",\n  \"bio\": \"Demo talent created from Postman.\",\n  \"origin_city\": \"Jakarta\",\n  \"contact_name\": \"Demo Manager\",\n  \"contact_phone\": \"081234567890\",\n  \"contact_email\": \"manager@example.com\",\n  \"instagram\": \"postmanband\"\n}" }, "url": "{{base_url}}/talents" },
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data && json.data.id) pm.collectionVariables.set('talent_id', json.data.id);"] } }]
+        },
+        { "name": "Update Talent", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"bio\": \"Updated from Postman.\",\n  \"is_active\": true\n}" }, "url": "{{base_url}}/talents/{{talent_id}}" } },
+        { "name": "Delete Talent", "request": { "method": "DELETE", "url": "{{base_url}}/talents/{{talent_id}}" } },
+        { "name": "List Event Lineup", "auth": { "type": "noauth" }, "request": { "method": "GET", "url": "{{base_url}}/events/{{event_id}}/talents" } },
+        {
+          "name": "Add Talent to Lineup",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"talent_id\": {{talent_id}},\n  \"role\": \"headliner\",\n  \"performance_order\": 1,\n  \"performance_time\": \"20:00\"\n}" }, "url": "{{base_url}}/events/{{event_id}}/talents" },
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data && json.data.id) pm.collectionVariables.set('lineup_id', json.data.id);"] } }]
+        },
+        { "name": "Update Lineup Entry", "request": { "method": "PUT", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"role\": \"performer\",\n  \"performance_order\": 2,\n  \"performance_time\": \"18:00\"\n}" }, "url": "{{base_url}}/events/{{event_id}}/talents/{{lineup_id}}" } },
+        { "name": "Delete Lineup Entry", "request": { "method": "DELETE", "url": "{{base_url}}/events/{{event_id}}/talents/{{lineup_id}}" } }
+      ]
+    },
+    {
+      "name": "Tickets",
+      "item": [
+        { "name": "Show Ticket", "request": { "method": "GET", "url": "{{base_url}}/tickets/{{ticket_code}}" } },
+        { "name": "Scan Ticket", "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{organizer_token}}", "type": "string" }] }, "request": { "method": "POST", "url": "{{base_url}}/tickets/{{ticket_code}}/scan" } }
+      ]
+    },
+    {
+      "name": "Ticket Agent Portal",
+      "auth": { "type": "bearer", "bearer": [{ "key": "token", "value": "{{organizer_token}}", "type": "string" }] },
+      "item": [
+        { "name": "Agent Event", "request": { "method": "GET", "url": "{{base_url}}/agent/event" } },
+        { "name": "Agent Event Ticket Types", "request": { "method": "GET", "url": "{{base_url}}/agent/event/ticket-types" } },
+        { "name": "Agent Orders", "request": { "method": "GET", "url": "{{base_url}}/agent/orders?limit=15&search=" } },
+        {
+          "name": "Create Agent Order",
+          "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }], "body": { "mode": "raw", "raw": "{\n  \"buyer_name\": \"Walk-in Buyer\",\n  \"buyer_phone\": \"081234567890\",\n  \"items\": [{\n    \"ticket_type_id\": {{ticket_type_id}},\n    \"quantity\": 1\n  }]\n}" }, "url": "{{base_url}}/agent/orders" },
+          "event": [{ "listen": "test", "script": { "exec": ["const json = pm.response.json();", "if (json.data && json.data.order_number) pm.collectionVariables.set('order_number', json.data.order_number);"] } }]
+        },
+        { "name": "Show Agent Order", "request": { "method": "GET", "url": "{{base_url}}/agent/orders/{{order_number}}" } },
+        { "name": "Agent Summary", "request": { "method": "GET", "url": "{{base_url}}/agent/summary" } }
+      ]
+    },
+    {
+      "name": "Webhooks",
+      "auth": { "type": "noauth" },
+      "item": [
+        { "name": "Xendit Payment Webhook", "request": { "method": "POST", "header": [{ "key": "Content-Type", "value": "application/json" }, { "key": "x-callback-token", "value": "{{xendit_callback_token}}" }], "body": { "mode": "raw", "raw": "{\n  \"event\": \"payment.succeeded\",\n  \"data\": {\n    \"id\": \"ps_test_1\",\n    \"payment_request_id\": \"pr_test_1\",\n    \"reference_id\": \"{{payment_reference}}\",\n    \"amount\": 100000,\n    \"status\": \"SUCCEEDED\",\n    \"created\": \"2026-08-26T12:00:00+07:00\"\n  }\n}" }, "url": "{{base_url}}/webhooks/xendit" } }
+      ]
+    }
+  ]
+}

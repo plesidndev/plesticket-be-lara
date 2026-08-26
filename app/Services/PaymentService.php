@@ -10,6 +10,7 @@ use App\Models\Payment;
 use App\Repositories\Contracts\PaymentRepositoryInterface;
 use App\Services\Payments\Data\PaymentMethod;
 use App\Services\Payments\PaymentGatewayManager;
+use App\Services\Payments\PaymentGatewayException;
 use App\Services\Payments\PaymentMethodCatalog;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -131,7 +132,19 @@ class PaymentService
 
         $payment->setRelation('order', $order);
 
-        $result = $this->gateways->for($method->provider)->createCharge($payment, $method);
+        try {
+            $result = $this->gateways->for($method->provider)->createCharge($payment, $method);
+        } catch (PaymentGatewayException $e) {
+            // A charge without provider instructions cannot be reused. Keep the
+            // order reservation, but retire this attempt so the buyer can retry
+            // through POST /orders/{orderNumber}/payments.
+            $this->payments->update($payment, [
+                'status' => PaymentStatus::Failed,
+                'provider_payload' => $e->context,
+            ]);
+
+            throw $e;
+        }
 
         return $this->payments->update($payment, [
             'provider_reference'        => $result->providerReference,

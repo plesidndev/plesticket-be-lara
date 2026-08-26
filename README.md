@@ -68,7 +68,10 @@ php artisan db:seed                           # all seeders
 php artisan db:seed --class=SuperAdminSeeder  # superadmin@plesticket.com / adminpass
 php artisan db:seed --class=ProvinceSeeder
 php artisan db:seed --class=CitySeeder
+php artisan db:seed --class=DummyEventSeeder   # 5 purchasable Sep/Oct 2026 demo events
 ```
+
+Dummy purchase credentials: `buyer.demo@plesticket.com` / `password123`.
 
 ## Roles
 

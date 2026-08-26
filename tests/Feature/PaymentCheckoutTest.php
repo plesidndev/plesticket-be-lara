@@ -147,6 +147,100 @@ class PaymentCheckoutTest extends TestCase
         ]);
     }
 
+    public function test_order_checkout_can_create_the_order_and_payment_together(): void
+    {
+        $this->fakeQrSuccess();
+
+        $response = $this->actingAs($this->buyer, 'api')
+            ->postJson('/api/orders', [
+                'event_id' => $this->order->event_id,
+                'payment_method' => 'qris',
+                'items' => [[
+                    'ticket_type_id' => $this->order->items()->first()->ticket_type_id,
+                    'quantity' => 1,
+                ]],
+            ])
+            ->assertCreated()
+            ->assertJsonPath('message', 'Order and payment created.')
+            ->assertJsonPath('data.order.status', 'pending_payment')
+            ->assertJsonPath('data.order.total_price', 150000)
+            ->assertJsonPath('data.payment.method_code', 'qris')
+            ->assertJsonPath('data.payment.status', 'pending')
+            ->assertJsonPath(
+                'data.payment.instruction.qr_string',
+                '00020101021226650013ID.CO.QRIS.WWW',
+            );
+
+        $this->assertDatabaseHas('orders', [
+            'order_number' => $response->json('data.order.order_number'),
+            'buyer_id' => $this->buyer->id,
+            'status' => 'pending_payment',
+        ]);
+
+        $this->assertDatabaseHas('payments', [
+            'reference_id' => $response->json('data.payment.reference_id'),
+            'method_code' => 'qris',
+            'provider' => 'xendit',
+            'status' => 'pending',
+        ]);
+    }
+
+    public function test_order_creation_without_a_payment_method_remains_supported(): void
+    {
+        $this->actingAs($this->buyer, 'api')
+            ->postJson('/api/orders', [
+                'event_id' => $this->order->event_id,
+                'items' => [[
+                    'ticket_type_id' => $this->order->items()->first()->ticket_type_id,
+                    'quantity' => 1,
+                ]],
+            ])
+            ->assertCreated()
+            ->assertJsonPath('message', 'Order created.')
+            ->assertJsonPath('data.status', 'pending_payment');
+
+        Http::assertNothingSent();
+    }
+
+    public function test_combined_checkout_keeps_the_order_available_when_the_gateway_fails(): void
+    {
+        Http::fake([
+            'api.xendit.co/*' => Http::response([
+                'error_code' => 'SERVER_ERROR',
+                'message' => 'Xendit is temporarily unavailable.',
+            ], 500),
+        ]);
+
+        $response = $this->actingAs($this->buyer, 'api')
+            ->postJson('/api/orders', [
+                'event_id' => $this->order->event_id,
+                'payment_method' => 'qris',
+                'items' => [[
+                    'ticket_type_id' => $this->order->items()->first()->ticket_type_id,
+                    'quantity' => 1,
+                ]],
+            ])
+            ->assertStatus(502)
+            ->assertJsonPath('message', 'Xendit is temporarily unavailable.')
+            ->assertJsonPath('data.order.status', 'pending_payment');
+
+        $orderNumber = $response->json('data.order.order_number');
+
+        $this->assertNotEmpty($orderNumber);
+        $this->assertStringContainsString(
+            "/api/orders/{$orderNumber}/payments",
+            $response->json('data.payment_retry_url'),
+        );
+        $this->assertDatabaseHas('orders', [
+            'order_number' => $orderNumber,
+            'status' => 'pending_payment',
+        ]);
+        $this->assertDatabaseHas('payments', [
+            'order_id' => Order::where('order_number', $orderNumber)->value('id'),
+            'status' => 'failed',
+        ]);
+    }
+
     public function test_requesting_a_payment_twice_reuses_the_live_charge(): void
     {
         $this->fakeQrSuccess();

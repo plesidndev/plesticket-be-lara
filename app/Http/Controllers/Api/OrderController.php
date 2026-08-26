@@ -5,7 +5,10 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Order\CreateOrderRequest;
 use App\Http\Resources\OrderResource;
+use App\Http\Resources\PaymentResource;
 use App\Services\OrderService;
+use App\Services\PaymentService;
+use App\Services\Payments\PaymentGatewayException;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,7 +19,10 @@ class OrderController extends Controller
 {
     use ApiResponse;
 
-    public function __construct(private readonly OrderService $service) {}
+    public function __construct(
+        private readonly OrderService $service,
+        private readonly PaymentService $payments,
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -30,15 +36,43 @@ class OrderController extends Controller
 
     public function store(CreateOrderRequest $request): JsonResponse
     {
+        $order = null;
+
         try {
-            $order = $this->service->create(auth('api')->id(), $request->validated());
+            $data = $request->validated();
+            $order = $this->service->create(auth('api')->id(), $data);
+
+            if (! isset($data['payment_method'])) {
+                return $this->created('Order created.', new OrderResource($order));
+            }
+
+            $payment = $this->payments->createForOrder(
+                $order->order_number,
+                auth('api')->id(),
+                $data['payment_method'],
+            );
+        } catch (PaymentGatewayException $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+                'data' => [
+                    'order' => $order ? new OrderResource($order) : null,
+                    'payment' => null,
+                    'payment_retry_url' => $order
+                        ? url("/api/orders/{$order->order_number}/payments")
+                        : null,
+                ],
+            ], 502);
         } catch (RuntimeException $e) {
             return $this->error($e->getMessage(), 404);
         } catch (InvalidArgumentException $e) {
             return $this->error($e->getMessage(), 422);
         }
 
-        return $this->created('Order created.', new OrderResource($order));
+        return $this->created('Order and payment created.', [
+            'order' => new OrderResource($order),
+            'payment' => new PaymentResource($payment),
+        ]);
     }
 
     public function show(string $orderNumber): JsonResponse

@@ -5,6 +5,7 @@ namespace App\Http\Requests\Order;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 
 class CreateOrderRequest extends FormRequest
 {
@@ -15,9 +16,15 @@ class CreateOrderRequest extends FormRequest
 
     public function rules(): array
     {
+        $enabledPaymentMethods = collect(config('payments.methods', []))
+            ->where('enabled', true)
+            ->pluck('code')
+            ->all();
+
         return [
-            'event_id'              => ['required', 'string'],
-            'items'                 => ['required', 'array', 'min:1'],
+            'event_id'               => ['required', 'string'],
+            'payment_method'         => ['sometimes', 'required', 'string', Rule::in($enabledPaymentMethods)],
+            'items'                  => ['required', 'array', 'min:1'],
             'items.*.ticket_type_id' => ['required', 'integer', 'exists:ticket_types,id'],
             'items.*.quantity'      => ['required', 'integer', 'min:1', 'max:10'],
         ];
