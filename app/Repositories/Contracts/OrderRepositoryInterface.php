@@ -12,6 +12,9 @@ interface OrderRepositoryInterface
     public function paginateAgentOrdersByEvent(string $eventId, int $perPage, ?string $search): LengthAwarePaginator;
     public function agentsSummaryByEvent(string $eventId): array;
     public function findByOrderNumber(string $orderNumber): ?Order;
+
+    /** Unpaid orders whose hold has lapsed and whose quota is still reserved. */
+    public function pendingExpired(int $limit): \Illuminate\Database\Eloquent\Collection;
     public function create(array $data): Order;
     public function update(Order $order, array $data): Order;
     public function agentSummary(int $agentId, ?string $from, ?string $to): array;

@@ -231,16 +231,30 @@ class OrderService
 
     /**
      * Marks an order expired and returns its reserved quota to the pool.
+     *
+     * Row-locked: the sweeper runs alongside live requests that also expire
+     * lapsed orders, and restoring the same order's quota twice would hand out
+     * seats that do not exist.
+     *
+     * Returns true only when this call is the one that released the order.
      */
-    public function expire(Order $order): Order
+    public function expire(Order $order): bool
     {
-        if ($order->status !== OrderStatus::PendingPayment) {
-            return $order;
-        }
+        return (bool) DB::transaction(function () use ($order) {
+            $locked = Order::with('items.ticketType')
+                ->whereKey($order->id)
+                ->lockForUpdate()
+                ->first();
 
-        $this->restoreQuotas($order);
+            if (! $locked || $locked->status !== OrderStatus::PendingPayment) {
+                return false;
+            }
 
-        return $this->orders->update($order, ['status' => OrderStatus::Expired]);
+            $this->restoreQuotas($locked);
+            $this->orders->update($locked, ['status' => OrderStatus::Expired]);
+
+            return true;
+        });
     }
 
     public function cancel(string $orderNumber, int $buyerId): Order

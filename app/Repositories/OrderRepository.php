@@ -17,6 +17,17 @@ class OrderRepository implements OrderRepositoryInterface
             ->paginate($perPage);
     }
 
+    public function pendingExpired(int $limit): \Illuminate\Database\Eloquent\Collection
+    {
+        return Order::with('items.ticketType')
+            ->where('status', \App\Enums\OrderStatus::PendingPayment->value)
+            ->whereNotNull('expires_at')
+            ->where('expires_at', '<', now())
+            ->orderBy('expires_at')
+            ->limit($limit)
+            ->get();
+    }
+
     public function findByOrderNumber(string $orderNumber): ?Order
     {
         return Order::with(['event', 'items.tickets', 'items.ticketType'])

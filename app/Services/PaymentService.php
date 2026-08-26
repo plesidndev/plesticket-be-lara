@@ -265,10 +265,19 @@ class PaymentService
         // or by the direct pay route. This is a second, genuine payment.
         $duplicate = $order && $order->status === OrderStatus::Paid;
 
+        // The order was released before the money landed. Its quota is back in
+        // the pool and may already be sold, so issuing tickets here would
+        // oversell the event. Take the money into the refund queue instead.
+        $released = $order && in_array(
+            $order->status,
+            [OrderStatus::Expired, OrderStatus::Cancelled],
+            true,
+        );
+
         $this->payments->update($payment, [
             'status'             => PaymentStatus::Paid,
             'paid_at'            => $paidAt,
-            'requires_refund'    => $duplicate,
+            'requires_refund'    => $duplicate || $released,
             'provider_reference' => $event->providerReference ?? $payment->provider_reference,
             'provider_payload'   => $event->raw,
         ]);
@@ -279,6 +288,17 @@ class PaymentService
                 'reference_id' => $payment->reference_id,
                 'amount'       => (float) $payment->amount,
                 'method_code'  => $payment->method_code,
+            ]);
+
+            return WebhookDeliveryStatus::Applied;
+        }
+
+        if ($released) {
+            Log::critical('Payment landed on an order that was already released — refund required.', [
+                'order_number' => $order->order_number,
+                'order_status' => $order->status->value,
+                'reference_id' => $payment->reference_id,
+                'amount'       => (float) $payment->amount,
             ]);
 
             return WebhookDeliveryStatus::Applied;
@@ -296,6 +316,20 @@ class PaymentService
         $this->orders->markPaid($order, $payment->method_code, $paidAt);
 
         return WebhookDeliveryStatus::Applied;
+    }
+
+    /**
+     * Marks any still-pending charges on an order as expired.
+     *
+     * No provider call: a charge on a lapsed order has already passed its own
+     * expiry at the gateway, and a batch sweep should not make one network
+     * request per order.
+     */
+    public function expirePendingFor(Order $order): void
+    {
+        foreach ($this->payments->pendingForOrder($order->id) as $payment) {
+            $this->payments->update($payment, ['status' => PaymentStatus::Expired]);
+        }
     }
 
     private function generateReferenceId(Order $order): string

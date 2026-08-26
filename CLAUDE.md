@@ -299,6 +299,23 @@ SELECT * FROM webhook_deliveries WHERE status IN ('unmatched', 'failed');
 Redeliveries deliberately create separate rows: this is an audit log, not a
 deduplication key. Idempotency is enforced in `OrderService::markPaid()` instead.
 
+### Order expiry / quota release
+Quota is decremented when an order is created and returned when it expires. But
+expiry is **lazy** — `OrderService::expire()` only fires when something touches
+the order — so an abandoned checkout would hold its seats forever.
+
+`php artisan orders:expire` sweeps lapsed unpaid orders and puts the quota back.
+It is scheduled every five minutes in `routes/console.php`, and the container
+runs `schedule:work` under supervisord. **Both halves are required**: without the
+supervisord program the schedule never fires.
+
+`expire()` is row-locked, because the sweeper runs alongside live requests that
+also expire lapsed orders and a double restore would oversell the event.
+
+If money arrives for an order the sweeper already released, `PaymentService`
+stores the payment with `requires_refund = true` and logs at `critical` rather
+than issuing tickets against quota that may now be sold.
+
 ### Ticket issuance
 `OrderService::markPaid()` is the single place that settles an order and mints
 tickets. Both the direct `POST /orders/{n}/pay` route and the gateway webhook go
