@@ -1,5 +1,5 @@
 <IfModule mod_headers.c>
-    SetEnvIf Origin "^https://(plesticket-fe\.vercel\.app|localhost:3000)$" CORS_ORIGIN=$0
+    SetEnvIf Origin "^(https://(plesticket-fe|plesticket-dev)\.vercel\.app|http://(localhost|127\.0\.0\.1):3000)$" CORS_ORIGIN=$0
     Header always set Access-Control-Allow-Origin "%{CORS_ORIGIN}e" env=CORS_ORIGIN
     Header always set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
     Header always set Access-Control-Allow-Headers "Authorization, Content-Type, Accept, X-Requested-With"
