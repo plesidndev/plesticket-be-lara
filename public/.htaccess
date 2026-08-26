@@ -3,7 +3,19 @@
     Header always set Access-Control-Allow-Origin "%{CORS_ORIGIN}e" env=CORS_ORIGIN
     Header always set Access-Control-Allow-Methods "GET, POST, PUT, PATCH, DELETE, OPTIONS"
     Header always set Access-Control-Allow-Headers "Authorization, Content-Type, Accept, X-Requested-With"
-    Header always set Access-Control-Max-Age "86400"
+
+    # REQUIRED: Allow-Origin differs per caller, so any cache in front of us
+    # (Hostinger's CDN is) must key on Origin. Without this it can serve a
+    # response built for one origin - or for a disallowed origin, which carries
+    # no Allow-Origin at all - to a different one, producing an intermittent
+    # "No 'Access-Control-Allow-Origin' header is present" that no server-side
+    # test reproduces.
+    Header always merge Vary Origin
+
+    # Browsers cache preflight FAILURES too. Keep this short on dev, or a single
+    # bad deploy locks every developer out for the full duration with no way to
+    # clear it but a hard reload.
+    Header always set Access-Control-Max-Age "600"
 
     # Return 200 for OPTIONS preflight immediately — never hits PHP
     RewriteEngine On
