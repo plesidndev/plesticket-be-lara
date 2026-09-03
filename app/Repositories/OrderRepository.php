@@ -2,8 +2,10 @@
 
 namespace App\Repositories;
 
+use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Repositories\Contracts\OrderRepositoryInterface;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
@@ -17,10 +19,10 @@ class OrderRepository implements OrderRepositoryInterface
             ->paginate($perPage);
     }
 
-    public function pendingExpired(int $limit): \Illuminate\Database\Eloquent\Collection
+    public function pendingExpired(int $limit): Collection
     {
         return Order::with('items.ticketType')
-            ->where('status', \App\Enums\OrderStatus::PendingPayment->value)
+            ->where('status', OrderStatus::PendingPayment->value)
             ->whereNotNull('expires_at')
             ->where('expires_at', '<', now())
             ->orderBy('expires_at')
@@ -39,10 +41,10 @@ class OrderRepository implements OrderRepositoryInterface
     {
         return Order::with(['event', 'items.tickets'])
             ->where('agent_id', $agentId)
-            ->when($search, fn($q) => $q->where(function ($q) use ($search) {
-                $q->where('buyer_name', 'ilike', "%{$search}%")
-                  ->orWhere('buyer_phone', 'ilike', "%{$search}%")
-                  ->orWhere('order_number', 'ilike', "%{$search}%");
+            ->when($search, fn ($q) => $q->where(function ($q) use ($search) {
+                $q->where('buyer_name', 'like', "%{$search}%")
+                    ->orWhere('buyer_phone', 'like', "%{$search}%")
+                    ->orWhere('order_number', 'like', "%{$search}%");
             }))
             ->orderByDesc('created_at')
             ->paginate($perPage);
@@ -60,20 +62,20 @@ class OrderRepository implements OrderRepositoryInterface
             $query->whereDate('paid_at', '<=', $to);
         }
 
-        $totalOrders  = $query->count();
+        $totalOrders = $query->count();
         $totalRevenue = $query->sum('total_price');
         $totalTickets = DB::table('order_items')
             ->join('orders', 'orders.id', '=', 'order_items.order_id')
             ->where('orders.agent_id', $agentId)
             ->where('orders.status', 'paid')
-            ->when($from, fn($q) => $q->whereDate('orders.paid_at', '>=', $from))
-            ->when($to,   fn($q) => $q->whereDate('orders.paid_at', '<=', $to))
+            ->when($from, fn ($q) => $q->whereDate('orders.paid_at', '>=', $from))
+            ->when($to, fn ($q) => $q->whereDate('orders.paid_at', '<=', $to))
             ->sum('order_items.quantity');
 
         return [
-            'total_orders'       => $totalOrders,
+            'total_orders' => $totalOrders,
             'total_tickets_sold' => (int) $totalTickets,
-            'total_revenue'      => (float) $totalRevenue,
+            'total_revenue' => (float) $totalRevenue,
         ];
     }
 
@@ -82,10 +84,10 @@ class OrderRepository implements OrderRepositoryInterface
         return Order::with(['agent', 'items'])
             ->where('event_id', $eventId)
             ->where('is_agent_sale', true)
-            ->when($search, fn($q) => $q->where(function ($q) use ($search) {
-                $q->where('buyer_name', 'ilike', "%{$search}%")
-                  ->orWhere('buyer_phone', 'ilike', "%{$search}%")
-                  ->orWhere('order_number', 'ilike', "%{$search}%");
+            ->when($search, fn ($q) => $q->where(function ($q) use ($search) {
+                $q->where('buyer_name', 'like', "%{$search}%")
+                    ->orWhere('buyer_phone', 'like', "%{$search}%")
+                    ->orWhere('order_number', 'like', "%{$search}%");
             }))
             ->orderByDesc('created_at')
             ->paginate($perPage);
@@ -98,7 +100,7 @@ class OrderRepository implements OrderRepositoryInterface
             ->where('organizer_members.role', 'MITRA_TICKET_BOX')
             ->leftJoin('orders', function ($join) {
                 $join->on('orders.agent_id', '=', 'organizer_members.id')
-                     ->where('orders.status', '=', 'paid');
+                    ->where('orders.status', '=', 'paid');
             })
             ->leftJoin('order_items', 'order_items.order_id', '=', 'orders.id')
             ->select(
@@ -120,18 +122,18 @@ class OrderRepository implements OrderRepositoryInterface
             )
             ->orderBy('organizer_members.name')
             ->get()
-            ->map(fn($row) => [
+            ->map(fn ($row) => [
                 'agent' => [
-                    'id'              => $row->id,
-                    'uid'             => $row->uid,
-                    'name'            => $row->name,
+                    'id' => $row->id,
+                    'uid' => $row->uid,
+                    'name' => $row->name,
                     'commission_rate' => (float) $row->commission_rate,
-                    'is_active'       => (bool) $row->is_active,
+                    'is_active' => (bool) $row->is_active,
                 ],
-                'total_orders'       => (int) $row->total_orders,
+                'total_orders' => (int) $row->total_orders,
                 'total_tickets_sold' => (int) $row->total_tickets_sold,
-                'total_revenue'      => (float) $row->total_revenue,
-                'commission_owed'    => round((float) $row->total_revenue * (float) $row->commission_rate / 100, 2),
+                'total_revenue' => (float) $row->total_revenue,
+                'commission_owed' => round((float) $row->total_revenue * (float) $row->commission_rate / 100, 2),
             ])
             ->toArray();
     }
@@ -140,12 +142,14 @@ class OrderRepository implements OrderRepositoryInterface
     {
         $data['order_number'] = sprintf('ORD%s%05d', now()->format('Ymd'), Order::count() + 1);
         $order = Order::create($data);
+
         return $order->fresh(['event', 'items']);
     }
 
     public function update(Order $order, array $data): Order
     {
         $order->update($data);
+
         return $order->fresh(['event', 'items.tickets', 'items.ticketType']);
     }
 }

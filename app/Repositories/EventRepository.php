@@ -19,7 +19,7 @@ class EventRepository implements EventRepositoryInterface
         }
 
         if (! empty($filters['city'])) {
-            $query->where('city', 'ilike', '%' . $filters['city'] . '%');
+            $query->where('city', 'like', '%'.$filters['city'].'%');
         }
 
         if (isset($filters['is_online'])) {
@@ -28,15 +28,15 @@ class EventRepository implements EventRepositoryInterface
 
         if (! empty($filters['search'])) {
             $query->where(function ($q) use ($filters) {
-                $q->where('title', 'ilike', '%' . $filters['search'] . '%')
-                  ->orWhere('description', 'ilike', '%' . $filters['search'] . '%');
+                $q->where('title', 'like', '%'.$filters['search'].'%')
+                    ->orWhere('description', 'like', '%'.$filters['search'].'%');
             });
         }
 
-        match($filters['sort'] ?? 'upcoming') {
+        match ($filters['sort'] ?? 'upcoming') {
             'date_desc' => $query->orderByDesc('start_date'),
-            'newest'    => $query->orderByDesc('created_at'),
-            default     => $query->orderBy('start_date', 'asc'), // upcoming: soonest first
+            'newest' => $query->orderByDesc('created_at'),
+            default => $query->orderBy('start_date', 'asc'), // upcoming: soonest first
         };
 
         return $query->paginate($perPage);
@@ -52,8 +52,8 @@ class EventRepository implements EventRepositoryInterface
 
         if (! empty($filters['search'])) {
             $query->where(function ($q) use ($filters) {
-                $q->where('title', 'ilike', '%' . $filters['search'] . '%')
-                  ->orWhere('event_id', 'ilike', '%' . $filters['search'] . '%');
+                $q->where('title', 'like', '%'.$filters['search'].'%')
+                    ->orWhere('event_id', 'like', '%'.$filters['search'].'%');
             });
         }
 
@@ -93,12 +93,14 @@ class EventRepository implements EventRepositoryInterface
     {
         $data['event_id'] = sprintf('EVT%04d', Event::withTrashed()->count() + 1);
         $event = Event::create($data);
+
         return $event->fresh();
     }
 
     public function update(Event $event, array $data): Event
     {
         $event->update($data);
+
         return $event->fresh(['user', 'verifiedBy']);
     }
 

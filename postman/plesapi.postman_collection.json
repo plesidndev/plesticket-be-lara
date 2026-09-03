@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "70316433-42e1-4aac-ae81-plesticketapi",
     "name": "PlesTicket API",
-    "description": "Complete collection for routes/api.php. Run Buyer Login, Organizer Owner Login, or Super Admin Login before protected requests. IDs are collection variables and can be changed after importing.\n\nEVENT ORGANIZER ROUTES: events, members, agents, talents and lineup now require an account with is_organizer = true. The seeded organizer.demo@plesticket.com already has it. A freshly registered account does NOT - run 'Activate Organizer Access' first, or those requests return 403 with errors.code = EO_NOT_ACTIVATED.\n\nORDER EXPIRY: unpaid orders are swept about every 5 minutes past their 30-minute hold, which releases their ticket quota. An order_number captured in an earlier session may have expired - create a new order rather than reusing a stale one.",
+    "description": "PlesTicket API - folders map to the frontend that calls them.\n\n  Public                 no auth; buyer site pre-login + shared reference data\n  Platform Auth          shared login for Buyer and EO (one users table)\n  Buyer App              orders, payments, tickets\n  EO App                 organizer dashboard; needs is_organizer = true\n  Organizer Member Apps  gate scanner + agent portal (separate auth guard)\n  Super Admin Console    platform administration\n  Webhooks               provider callbacks\n\nTOKENS: {{platform_token}} is set by any Platform Auth login and is used by Buyer, EO and Super Admin folders - logging in as a different account overwrites it. {{organizer_token}} is separate and set by Organizer Login.\n\nEO ROUTES: return 403 EO_NOT_ACTIVATED unless the account has is_organizer = true. organizer.demo@plesticket.com is seeded with it; a freshly registered account is not - run 'Activate Organizer Access'.\n\nORDER EXPIRY: unpaid orders are swept ~every 5 minutes past their 30-minute hold, releasing their quota. An order_number from an earlier session may have expired - create a new order rather than reusing a stale one.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -91,60 +91,123 @@
   ],
   "item": [
     {
-      "name": "System & Public Catalogs",
-      "auth": {
-        "type": "noauth"
-      },
+      "name": "Public (no auth)",
       "item": [
         {
-          "name": "Health",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/health"
-          }
+          "name": "Catalogs",
+          "item": [
+            {
+              "name": "Health",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/health"
+              }
+            },
+            {
+              "name": "List Provinces",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/provinces"
+              }
+            },
+            {
+              "name": "List Cities",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/cities?province_code=31&search=Jakarta"
+              }
+            },
+            {
+              "name": "List Banks",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/banks"
+              }
+            },
+            {
+              "name": "List Categories",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/categories"
+              }
+            },
+            {
+              "name": "List Payment Methods",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/payment-methods"
+              }
+            }
+          ]
         },
         {
-          "name": "List Provinces",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/provinces"
-          }
+          "name": "Events",
+          "item": [
+            {
+              "name": "List Public Events",
+              "auth": {
+                "type": "noauth"
+              },
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/events?limit=15&category=Music&city=Jakarta&sort=upcoming"
+              }
+            },
+            {
+              "name": "Public Event by Slug",
+              "auth": {
+                "type": "noauth"
+              },
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/events/{{event_slug}}"
+              }
+            }
+          ]
         },
         {
-          "name": "List Cities",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/cities?province_code=31&search=Jakarta"
-          }
-        },
-        {
-          "name": "List Banks",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/banks"
-          }
-        },
-        {
-          "name": "List Categories",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/categories"
-          }
-        },
-        {
-          "name": "List Payment Methods",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/payment-methods"
-          }
+          "name": "Talents",
+          "item": [
+            {
+              "name": "List Public Talents",
+              "auth": {
+                "type": "noauth"
+              },
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/talents?limit=20&search=&type=group&category=music"
+              }
+            },
+            {
+              "name": "Show Talent",
+              "auth": {
+                "type": "noauth"
+              },
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/talents/{{talent_id}}"
+              }
+            },
+            {
+              "name": "List Event Lineup",
+              "auth": {
+                "type": "noauth"
+              },
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/events/{{event_id}}/talents"
+              }
+            }
+          ]
         }
-      ]
-    },
-    {
-      "name": "Platform Authentication",
+      ],
       "auth": {
         "type": "noauth"
       },
+      "description": "No token required. Everything the buyer site can render before login, and the reference data both frontends need."
+    },
+    {
+      "name": "Platform Auth (shared by Buyer + EO)",
       "item": [
         {
           "name": "Register",
@@ -349,192 +412,620 @@
             }
           ]
         }
-      ]
+      ],
+      "description": "One users table, one login endpoint, shared by both frontends. is_organizer is a flag, not a role - the same account can organise events and buy tickets to someone else's. Run 'Activate Organizer Access' to set it; that returns a REPLACEMENT token which the test script swaps in automatically."
     },
     {
-      "name": "Organizer Member Authentication",
-      "auth": {
-        "type": "bearer",
-        "bearer": [
-          {
-            "key": "token",
-            "value": "{{organizer_token}}",
-            "type": "string"
-          }
-        ]
-      },
+      "name": "Buyer App",
       "item": [
         {
-          "name": "Organizer Login",
-          "auth": {
-            "type": "noauth"
-          },
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"uid\": \"{{organizer_uid}}\",\n  \"password\": \"password123\"\n}"
-            },
-            "url": "{{base_url}}/organizer-auth/login"
-          },
-          "event": [
+          "name": "Orders & Payments",
+          "item": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const json = pm.response.json();",
-                  "if (json.data && json.data.token) pm.collectionVariables.set('organizer_token', json.data.token);"
-                ]
+              "name": "List Orders",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/orders?limit=15"
               }
-            }
-          ]
-        },
-        {
-          "name": "Current Organizer Member",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/organizer-auth/me"
-          }
-        },
-        {
-          "name": "Organizer Logout",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/organizer-auth/logout"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Events",
-      "item": [
-        {
-          "name": "List Public Events",
-          "auth": {
-            "type": "noauth"
-          },
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/events?limit=15&category=Music&city=Jakarta&sort=upcoming"
-          }
-        },
-        {
-          "name": "Public Event by Slug",
-          "auth": {
-            "type": "noauth"
-          },
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/events/{{event_slug}}"
-          }
-        },
-        {
-          "name": "My Events",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/events/my?limit=15",
-            "description": "Organizer-only. Returns 403 EO_NOT_ACTIVATED on a plain buyer account."
-          }
-        },
-        {
-          "name": "Create Event",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Postman Test Event 2026\",\n  \"slug\": \"postman-test-event-2026\",\n  \"description\": \"Created from Postman\",\n  \"category\": \"Music\",\n  \"pic_name\": \"Demo Organizer\",\n  \"pic_identity_type\": \"ktp\",\n  \"pic_identity_number\": \"3173000000000001\",\n  \"start_date\": \"2026-12-20\",\n  \"end_date\": \"2026-12-20\",\n  \"start_time\": \"10:00\",\n  \"end_time\": \"22:00\",\n  \"is_online\": false,\n  \"venue_name\": \"Postman Hall\",\n  \"address\": \"Jakarta\",\n  \"city\": \"Kota Jakarta Pusat\",\n  \"province\": \"DKI Jakarta\",\n  \"show_status\": true,\n  \"ticket_types\": [{\n    \"name\": \"General Admission\",\n    \"price\": 100000,\n    \"quota\": 100,\n    \"is_active\": true,\n    \"sale_start\": \"2026-08-01 00:00:00\",\n    \"sale_end\": \"2026-12-20 09:00:00\"\n  }]\n}"
             },
-            "url": "{{base_url}}/events",
-            "description": "Requires an organizer account. If this returns 403 with errors.code = EO_NOT_ACTIVATED, run 'Activate Organizer Access' in Platform Authentication first."
-          },
-          "event": [
             {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const json = pm.response.json();",
-                  "const data = json.data || {};",
-                  "if (data.event_id) pm.collectionVariables.set('event_id', data.event_id);",
-                  "if (data.slug) pm.collectionVariables.set('event_slug', data.slug);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Update Event (PUT)",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"title\": \"Updated Postman Event\",\n  \"show_status\": true\n}"
-            },
-            "url": "{{base_url}}/events/{{event_id}}"
-          }
-        },
-        {
-          "name": "Update Event (POST)",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"description\": \"Updated using POST for multipart compatibility\"\n}"
-            },
-            "url": "{{base_url}}/events/{{event_id}}"
-          }
-        },
-        {
-          "name": "Upload Event Banner",
-          "request": {
-            "method": "POST",
-            "body": {
-              "mode": "formdata",
-              "formdata": [
+              "name": "Create Order",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"event_id\": \"{{event_id}}\",\n  \"payment_method\": \"qris\",\n  \"items\": [{\n    \"ticket_type_id\": {{ticket_type_id}},\n    \"quantity\": 1\n  }]\n}"
+                },
+                "url": "{{base_url}}/orders",
+                "description": "Creating an order reserves ticket quota immediately and holds it for 30 minutes. Leave it unpaid and the orders:expire sweeper releases the seats.\n\npayment_method is optional - include it to create the order and its charge in one call, or omit it and use 'Create QRIS Payment' separately."
+              },
+              "event": [
                 {
-                  "key": "banner",
-                  "type": "file",
-                  "src": []
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const json = pm.response.json();",
+                      "const data = json.data || {};",
+                      "const order = data.order || data;",
+                      "if (order.order_number) pm.collectionVariables.set('order_number', order.order_number);",
+                      "if (data.payment) {",
+                      "  if (data.payment.reference_id) pm.collectionVariables.set('payment_reference', data.payment.reference_id);",
+                      "  if (data.payment.amount) pm.collectionVariables.set('payment_amount', data.payment.amount);",
+                      "}"
+                    ]
+                  }
                 }
               ]
             },
-            "url": "{{base_url}}/events/{{event_id}}/banner"
-          }
+            {
+              "name": "Show Order",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/orders/{{order_number}}"
+              }
+            },
+            {
+              "name": "Direct Pay Order",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"payment_method\": \"cash\"\n}"
+                },
+                "url": "{{base_url}}/orders/{{order_number}}/pay"
+              }
+            },
+            {
+              "name": "Cancel Order",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/orders/{{order_number}}/cancel"
+              }
+            },
+            {
+              "name": "Create QRIS Payment",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"method_code\": \"qris\"\n}"
+                },
+                "url": "{{base_url}}/orders/{{order_number}}/payments"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const json = pm.response.json();",
+                      "const data = json.data || {};",
+                      "if (data.reference_id) pm.collectionVariables.set('payment_reference', data.reference_id);",
+                      "// Keep the webhook amount in step: a mismatch trips the underpayment guard,",
+                      "// which fails the payment and issues no tickets.",
+                      "if (data.amount) pm.collectionVariables.set('payment_amount', data.amount);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Get Current Payment",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/orders/{{order_number}}/payments"
+              }
+            }
+          ]
         },
         {
-          "name": "Toggle Event",
-          "request": {
-            "method": "PATCH",
-            "url": "{{base_url}}/events/{{event_id}}/toggle"
-          }
+          "name": "Tickets",
+          "item": [
+            {
+              "name": "Show Ticket",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/tickets/{{ticket_code}}"
+              }
+            }
+          ]
         }
-      ]
+      ],
+      "description": "The ticket-buying frontend. Plain auth:api - no EO privileges needed, and a buyer account never touches anything in the EO App folder."
     },
     {
-      "name": "Super Admin",
+      "name": "EO App (organizer)",
+      "item": [
+        {
+          "name": "My Events",
+          "item": [
+            {
+              "name": "My Events",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/events/my?limit=15",
+                "description": "Organizer-only. Returns 403 EO_NOT_ACTIVATED on a plain buyer account."
+              }
+            },
+            {
+              "name": "Create Event",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Postman Test Event 2026\",\n  \"slug\": \"postman-test-event-2026\",\n  \"description\": \"Created from Postman\",\n  \"category\": \"Music\",\n  \"pic_name\": \"Demo Organizer\",\n  \"pic_identity_type\": \"ktp\",\n  \"pic_identity_number\": \"3173000000000001\",\n  \"start_date\": \"2026-12-20\",\n  \"end_date\": \"2026-12-20\",\n  \"start_time\": \"10:00\",\n  \"end_time\": \"22:00\",\n  \"is_online\": false,\n  \"venue_name\": \"Postman Hall\",\n  \"address\": \"Jakarta\",\n  \"city\": \"Kota Jakarta Pusat\",\n  \"province\": \"DKI Jakarta\",\n  \"show_status\": true,\n  \"ticket_types\": [{\n    \"name\": \"General Admission\",\n    \"price\": 100000,\n    \"quota\": 100,\n    \"is_active\": true,\n    \"sale_start\": \"2026-08-01 00:00:00\",\n    \"sale_end\": \"2026-12-20 09:00:00\"\n  }]\n}"
+                },
+                "url": "{{base_url}}/events",
+                "description": "Requires an organizer account. If this returns 403 with errors.code = EO_NOT_ACTIVATED, run 'Activate Organizer Access' in Platform Authentication first."
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const json = pm.response.json();",
+                      "const data = json.data || {};",
+                      "if (data.event_id) pm.collectionVariables.set('event_id', data.event_id);",
+                      "if (data.slug) pm.collectionVariables.set('event_slug', data.slug);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Event (PUT)",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"title\": \"Updated Postman Event\",\n  \"show_status\": true\n}"
+                },
+                "url": "{{base_url}}/events/{{event_id}}"
+              }
+            },
+            {
+              "name": "Update Event (POST)",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"description\": \"Updated using POST for multipart compatibility\"\n}"
+                },
+                "url": "{{base_url}}/events/{{event_id}}"
+              }
+            },
+            {
+              "name": "Upload Event Banner",
+              "request": {
+                "method": "POST",
+                "body": {
+                  "mode": "formdata",
+                  "formdata": [
+                    {
+                      "key": "banner",
+                      "type": "file",
+                      "src": []
+                    }
+                  ]
+                },
+                "url": "{{base_url}}/events/{{event_id}}/banner"
+              }
+            },
+            {
+              "name": "Toggle Event",
+              "request": {
+                "method": "PATCH",
+                "url": "{{base_url}}/events/{{event_id}}/toggle"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Staff & Agents",
+          "item": [
+            {
+              "name": "List Members",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/events/{{event_id}}/members?limit=15"
+              }
+            },
+            {
+              "name": "Add Member",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Postman Ticket Agent\",\n  \"email\": \"agent.postman@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"MITRA_TICKET_BOX\",\n  \"commission_rate\": 5\n}"
+                },
+                "url": "{{base_url}}/events/{{event_id}}/members"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const json = pm.response.json();",
+                      "const data = json.data || {};",
+                      "if (data.id) { pm.collectionVariables.set('member_id', data.id); pm.collectionVariables.set('agent_id', data.id); }",
+                      "if (data.uid) pm.collectionVariables.set('organizer_uid', data.uid);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Member",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Updated Ticket Agent\",\n  \"commission_rate\": 7.5,\n  \"is_active\": true\n}"
+                },
+                "url": "{{base_url}}/events/{{event_id}}/members/{{member_id}}"
+              }
+            },
+            {
+              "name": "Delete Member",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/events/{{event_id}}/members/{{member_id}}"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agent Sales Reports",
+          "item": [
+            {
+              "name": "All Agent Orders",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/events/{{event_id}}/agents/orders?limit=15&search="
+              }
+            },
+            {
+              "name": "All Agents Summary",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/events/{{event_id}}/agents/summary"
+              }
+            },
+            {
+              "name": "Agent Orders",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/events/{{event_id}}/agents/{{agent_id}}/orders?limit=15&search="
+              }
+            },
+            {
+              "name": "Agent Summary",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/events/{{event_id}}/agents/{{agent_id}}/summary"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Talent Submissions",
+          "item": [
+            {
+              "name": "My Talents",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/talents/mine?limit=20&search="
+              }
+            },
+            {
+              "name": "Create Talent",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"Postman Band\",\n  \"slug\": \"postman-band\",\n  \"type\": \"group\",\n  \"category\": \"band\",\n  \"genre\": \"Pop\",\n  \"bio\": \"Demo talent created from Postman.\",\n  \"origin_city\": \"Jakarta\",\n  \"contact_name\": \"Demo Manager\",\n  \"contact_phone\": \"081234567890\",\n  \"contact_email\": \"manager@example.com\",\n  \"instagram\": \"postmanband\"\n}"
+                },
+                "url": "{{base_url}}/talents"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const json = pm.response.json();",
+                      "if (json.data && json.data.id) pm.collectionVariables.set('talent_id', json.data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Talent",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"bio\": \"Updated from Postman.\",\n  \"is_active\": true\n}"
+                },
+                "url": "{{base_url}}/talents/{{talent_id}}"
+              }
+            },
+            {
+              "name": "Delete Talent",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/talents/{{talent_id}}"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Event Lineup",
+          "item": [
+            {
+              "name": "Add Talent to Lineup",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"talent_id\": {{talent_id}},\n  \"role\": \"headliner\",\n  \"performance_order\": 1,\n  \"performance_time\": \"20:00\"\n}"
+                },
+                "url": "{{base_url}}/events/{{event_id}}/talents"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const json = pm.response.json();",
+                      "if (json.data && json.data.id) pm.collectionVariables.set('lineup_id', json.data.id);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Update Lineup Entry",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"role\": \"performer\",\n  \"performance_order\": 2,\n  \"performance_time\": \"18:00\"\n}"
+                },
+                "url": "{{base_url}}/events/{{event_id}}/talents/{{lineup_id}}"
+              }
+            },
+            {
+              "name": "Delete Lineup Entry",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/events/{{event_id}}/talents/{{lineup_id}}"
+              }
+            }
+          ]
+        }
+      ],
+      "description": "The organizer dashboard. Every request here sits behind the `eo` middleware and needs is_organizer = true. A plain buyer account gets 403 with errors.code = EO_NOT_ACTIVATED - that is a signal to onboard, not to log out.\n\nLog in as organizer.demo@plesticket.com (already activated) or run Activate Organizer Access first."
+    },
+    {
+      "name": "Organizer Member Apps (Gate + Agent)",
+      "item": [
+        {
+          "name": "Auth",
+          "item": [
+            {
+              "name": "Organizer Login",
+              "auth": {
+                "type": "noauth"
+              },
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"uid\": \"{{organizer_uid}}\",\n  \"password\": \"password123\"\n}"
+                },
+                "url": "{{base_url}}/organizer-auth/login"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const json = pm.response.json();",
+                      "if (json.data && json.data.token) pm.collectionVariables.set('organizer_token', json.data.token);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Current Organizer Member",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/organizer-auth/me"
+              }
+            },
+            {
+              "name": "Organizer Logout",
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/organizer-auth/logout"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Gate Scanning",
+          "item": [
+            {
+              "name": "Scan Ticket",
+              "auth": {
+                "type": "bearer",
+                "bearer": [
+                  {
+                    "key": "token",
+                    "value": "{{organizer_token}}",
+                    "type": "string"
+                  }
+                ]
+              },
+              "request": {
+                "method": "POST",
+                "url": "{{base_url}}/tickets/{{ticket_code}}/scan"
+              }
+            }
+          ]
+        },
+        {
+          "name": "Agent Portal",
+          "item": [
+            {
+              "name": "Agent Event",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/agent/event"
+              }
+            },
+            {
+              "name": "Agent Event Ticket Types",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/agent/event/ticket-types"
+              }
+            },
+            {
+              "name": "Agent Orders",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/agent/orders?limit=15&search="
+              }
+            },
+            {
+              "name": "Create Agent Order",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"buyer_name\": \"Walk-in Buyer\",\n  \"buyer_phone\": \"081234567890\",\n  \"items\": [{\n    \"ticket_type_id\": {{ticket_type_id}},\n    \"quantity\": 1\n  }]\n}"
+                },
+                "url": "{{base_url}}/agent/orders"
+              },
+              "event": [
+                {
+                  "listen": "test",
+                  "script": {
+                    "exec": [
+                      "const json = pm.response.json();",
+                      "if (json.data && json.data.order_number) pm.collectionVariables.set('order_number', json.data.order_number);"
+                    ]
+                  }
+                }
+              ]
+            },
+            {
+              "name": "Show Agent Order",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/agent/orders/{{order_number}}"
+              }
+            },
+            {
+              "name": "Agent Summary",
+              "request": {
+                "method": "GET",
+                "url": "{{base_url}}/agent/summary"
+              }
+            }
+          ]
+        }
+      ],
+      "description": "Separate auth system entirely: organizer_members on the auth:organizer guard, logging in with uid + password, scoped to one event. These are the staff an EO hires - gate officers scanning tickets, ticket agents selling walk-ins - not the EO themselves. Uses {{organizer_token}}, not {{platform_token}}."
+    },
+    {
+      "name": "Super Admin Console",
       "item": [
         {
           "name": "List Admin Categories",
@@ -681,477 +1172,11 @@
             "url": "{{base_url}}/admin/talents/{{talent_id}}/verify"
           }
         }
-      ]
+      ],
+      "description": "Platform administration: user management, event verification, talent verification, categories. Requires role:SUPER_ADMIN - run Super Admin Login first, which overwrites {{platform_token}}."
     },
     {
-      "name": "Organizer Members & Sales",
-      "item": [
-        {
-          "name": "List Members",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/events/{{event_id}}/members?limit=15"
-          }
-        },
-        {
-          "name": "Add Member",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Postman Ticket Agent\",\n  \"email\": \"agent.postman@example.com\",\n  \"password\": \"password123\",\n  \"role\": \"MITRA_TICKET_BOX\",\n  \"commission_rate\": 5\n}"
-            },
-            "url": "{{base_url}}/events/{{event_id}}/members"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const json = pm.response.json();",
-                  "const data = json.data || {};",
-                  "if (data.id) { pm.collectionVariables.set('member_id', data.id); pm.collectionVariables.set('agent_id', data.id); }",
-                  "if (data.uid) pm.collectionVariables.set('organizer_uid', data.uid);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Update Member",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Ticket Agent\",\n  \"commission_rate\": 7.5,\n  \"is_active\": true\n}"
-            },
-            "url": "{{base_url}}/events/{{event_id}}/members/{{member_id}}"
-          }
-        },
-        {
-          "name": "Delete Member",
-          "request": {
-            "method": "DELETE",
-            "url": "{{base_url}}/events/{{event_id}}/members/{{member_id}}"
-          }
-        },
-        {
-          "name": "All Agent Orders",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/events/{{event_id}}/agents/orders?limit=15&search="
-          }
-        },
-        {
-          "name": "All Agents Summary",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/events/{{event_id}}/agents/summary"
-          }
-        },
-        {
-          "name": "Agent Orders",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/events/{{event_id}}/agents/{{agent_id}}/orders?limit=15&search="
-          }
-        },
-        {
-          "name": "Agent Summary",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/events/{{event_id}}/agents/{{agent_id}}/summary"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Buyer Orders & Payments",
-      "item": [
-        {
-          "name": "List Orders",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/orders?limit=15"
-          }
-        },
-        {
-          "name": "Create Order",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"event_id\": \"{{event_id}}\",\n  \"payment_method\": \"qris\",\n  \"items\": [{\n    \"ticket_type_id\": {{ticket_type_id}},\n    \"quantity\": 1\n  }]\n}"
-            },
-            "url": "{{base_url}}/orders",
-            "description": "Creating an order reserves ticket quota immediately and holds it for 30 minutes. Leave it unpaid and the orders:expire sweeper releases the seats.\n\npayment_method is optional - include it to create the order and its charge in one call, or omit it and use 'Create QRIS Payment' separately."
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const json = pm.response.json();",
-                  "const data = json.data || {};",
-                  "const order = data.order || data;",
-                  "if (order.order_number) pm.collectionVariables.set('order_number', order.order_number);",
-                  "if (data.payment) {",
-                  "  if (data.payment.reference_id) pm.collectionVariables.set('payment_reference', data.payment.reference_id);",
-                  "  if (data.payment.amount) pm.collectionVariables.set('payment_amount', data.payment.amount);",
-                  "}"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Show Order",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/orders/{{order_number}}"
-          }
-        },
-        {
-          "name": "Direct Pay Order",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"payment_method\": \"cash\"\n}"
-            },
-            "url": "{{base_url}}/orders/{{order_number}}/pay"
-          }
-        },
-        {
-          "name": "Cancel Order",
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/orders/{{order_number}}/cancel"
-          }
-        },
-        {
-          "name": "Create QRIS Payment",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"method_code\": \"qris\"\n}"
-            },
-            "url": "{{base_url}}/orders/{{order_number}}/payments"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const json = pm.response.json();",
-                  "const data = json.data || {};",
-                  "if (data.reference_id) pm.collectionVariables.set('payment_reference', data.reference_id);",
-                  "// Keep the webhook amount in step: a mismatch trips the underpayment guard,",
-                  "// which fails the payment and issues no tickets.",
-                  "if (data.amount) pm.collectionVariables.set('payment_amount', data.amount);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Get Current Payment",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/orders/{{order_number}}/payments"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Talents & Event Lineup",
-      "item": [
-        {
-          "name": "List Public Talents",
-          "auth": {
-            "type": "noauth"
-          },
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/talents?limit=20&search=&type=group&category=music"
-          }
-        },
-        {
-          "name": "Show Talent",
-          "auth": {
-            "type": "noauth"
-          },
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/talents/{{talent_id}}"
-          }
-        },
-        {
-          "name": "My Talents",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/talents/mine?limit=20&search="
-          }
-        },
-        {
-          "name": "Create Talent",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"name\": \"Postman Band\",\n  \"slug\": \"postman-band\",\n  \"type\": \"group\",\n  \"category\": \"band\",\n  \"genre\": \"Pop\",\n  \"bio\": \"Demo talent created from Postman.\",\n  \"origin_city\": \"Jakarta\",\n  \"contact_name\": \"Demo Manager\",\n  \"contact_phone\": \"081234567890\",\n  \"contact_email\": \"manager@example.com\",\n  \"instagram\": \"postmanband\"\n}"
-            },
-            "url": "{{base_url}}/talents"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const json = pm.response.json();",
-                  "if (json.data && json.data.id) pm.collectionVariables.set('talent_id', json.data.id);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Update Talent",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"bio\": \"Updated from Postman.\",\n  \"is_active\": true\n}"
-            },
-            "url": "{{base_url}}/talents/{{talent_id}}"
-          }
-        },
-        {
-          "name": "Delete Talent",
-          "request": {
-            "method": "DELETE",
-            "url": "{{base_url}}/talents/{{talent_id}}"
-          }
-        },
-        {
-          "name": "List Event Lineup",
-          "auth": {
-            "type": "noauth"
-          },
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/events/{{event_id}}/talents"
-          }
-        },
-        {
-          "name": "Add Talent to Lineup",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"talent_id\": {{talent_id}},\n  \"role\": \"headliner\",\n  \"performance_order\": 1,\n  \"performance_time\": \"20:00\"\n}"
-            },
-            "url": "{{base_url}}/events/{{event_id}}/talents"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const json = pm.response.json();",
-                  "if (json.data && json.data.id) pm.collectionVariables.set('lineup_id', json.data.id);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Update Lineup Entry",
-          "request": {
-            "method": "PUT",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"role\": \"performer\",\n  \"performance_order\": 2,\n  \"performance_time\": \"18:00\"\n}"
-            },
-            "url": "{{base_url}}/events/{{event_id}}/talents/{{lineup_id}}"
-          }
-        },
-        {
-          "name": "Delete Lineup Entry",
-          "request": {
-            "method": "DELETE",
-            "url": "{{base_url}}/events/{{event_id}}/talents/{{lineup_id}}"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Tickets",
-      "item": [
-        {
-          "name": "Show Ticket",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/tickets/{{ticket_code}}"
-          }
-        },
-        {
-          "name": "Scan Ticket",
-          "auth": {
-            "type": "bearer",
-            "bearer": [
-              {
-                "key": "token",
-                "value": "{{organizer_token}}",
-                "type": "string"
-              }
-            ]
-          },
-          "request": {
-            "method": "POST",
-            "url": "{{base_url}}/tickets/{{ticket_code}}/scan"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Ticket Agent Portal",
-      "auth": {
-        "type": "bearer",
-        "bearer": [
-          {
-            "key": "token",
-            "value": "{{organizer_token}}",
-            "type": "string"
-          }
-        ]
-      },
-      "item": [
-        {
-          "name": "Agent Event",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/agent/event"
-          }
-        },
-        {
-          "name": "Agent Event Ticket Types",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/agent/event/ticket-types"
-          }
-        },
-        {
-          "name": "Agent Orders",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/agent/orders?limit=15&search="
-          }
-        },
-        {
-          "name": "Create Agent Order",
-          "request": {
-            "method": "POST",
-            "header": [
-              {
-                "key": "Content-Type",
-                "value": "application/json"
-              }
-            ],
-            "body": {
-              "mode": "raw",
-              "raw": "{\n  \"buyer_name\": \"Walk-in Buyer\",\n  \"buyer_phone\": \"081234567890\",\n  \"items\": [{\n    \"ticket_type_id\": {{ticket_type_id}},\n    \"quantity\": 1\n  }]\n}"
-            },
-            "url": "{{base_url}}/agent/orders"
-          },
-          "event": [
-            {
-              "listen": "test",
-              "script": {
-                "exec": [
-                  "const json = pm.response.json();",
-                  "if (json.data && json.data.order_number) pm.collectionVariables.set('order_number', json.data.order_number);"
-                ]
-              }
-            }
-          ]
-        },
-        {
-          "name": "Show Agent Order",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/agent/orders/{{order_number}}"
-          }
-        },
-        {
-          "name": "Agent Summary",
-          "request": {
-            "method": "GET",
-            "url": "{{base_url}}/agent/summary"
-          }
-        }
-      ]
-    },
-    {
-      "name": "Webhooks",
-      "auth": {
-        "type": "noauth"
-      },
+      "name": "Webhooks (provider callbacks)",
       "item": [
         {
           "name": "Xendit Payment Webhook",
@@ -1175,7 +1200,11 @@
             "description": "Simulates a Xendit callback locally. Run Create Order (with payment_method) or Create QRIS Payment first so payment_reference and payment_amount are set, and put your XENDIT_CALLBACK_TOKEN into the xendit_callback_token variable.\n\namount must match the payment exactly - a lower value trips the underpayment guard, which marks the payment failed and issues no tickets."
           }
         }
-      ]
+      ],
+      "auth": {
+        "type": "noauth"
+      },
+      "description": "Simulates provider callbacks locally. No auth - verified by the x-callback-token header instead."
     }
   ]
 }

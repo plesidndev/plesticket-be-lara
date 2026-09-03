@@ -18,8 +18,8 @@ class CategoryRepository implements CategoryRepositoryInterface
     {
         $query = Category::orderBy('name');
 
-        if (!empty($filters['search'])) {
-            $query->where('name', 'ilike', '%' . $filters['search'] . '%');
+        if (! empty($filters['search'])) {
+            $query->where('name', 'like', '%'.$filters['search'].'%');
         }
 
         if (isset($filters['is_active']) && $filters['is_active'] !== '') {
@@ -37,7 +37,7 @@ class CategoryRepository implements CategoryRepositoryInterface
     public function findByName(string $name, ?int $excludeId = null): ?Category
     {
         return Category::where('name', $name)
-            ->when($excludeId, fn($q) => $q->where('id', '!=', $excludeId))
+            ->when($excludeId, fn ($q) => $q->where('id', '!=', $excludeId))
             ->first();
     }
 
@@ -49,6 +49,7 @@ class CategoryRepository implements CategoryRepositoryInterface
     public function update(Category $category, array $data): Category
     {
         $category->update($data);
+
         return $category->fresh();
     }
 

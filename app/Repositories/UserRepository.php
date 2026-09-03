@@ -15,7 +15,7 @@ class UserRepository implements UserRepositoryInterface
 
         $uid = match ($user->role) {
             UserRole::SuperAdmin => sprintf('SA%04d', $user->id),
-            default              => sprintf('U%06d', $user->id),
+            default => sprintf('U%06d', $user->id),
         };
 
         $user->update(['uid' => $uid]);
@@ -52,8 +52,8 @@ class UserRepository implements UserRepositoryInterface
 
         if (! empty($filters['search'])) {
             $query->where(function ($q) use ($filters) {
-                $q->where('name', 'ilike', '%' . $filters['search'] . '%')
-                  ->orWhere('email', 'ilike', '%' . $filters['search'] . '%');
+                $q->where('name', 'like', '%'.$filters['search'].'%')
+                    ->orWhere('email', 'like', '%'.$filters['search'].'%');
             });
         }
 
@@ -63,6 +63,7 @@ class UserRepository implements UserRepositoryInterface
     public function update(User $user, array $data): User
     {
         $user->update($data);
+
         return $user->fresh();
     }
 

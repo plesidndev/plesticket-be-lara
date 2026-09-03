@@ -1,0 +1,237 @@
+{
+  "LOGIN ok": {
+    "status": 200,
+    "body": {
+      "status": "success",
+      "message": "Login successful.",
+      "data": {
+        "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2FwaWRldnRpY2tldC5wbGVzY3JlYXRpdmUuY29tL2FwaS9hdXRoL2xvZ2luIiwiaWF0IjoxNzg3ODA0MDgwLCJleHAiOjE3ODc4MDc2ODAsIm5iZiI6MTc4NzgwNDA4MCwianRpIjoiVUhmNkt1VkZabWdYSEVkZSIsInN1YiI6IjEiLCJwcnYiOiIyM2JkNWM4OTQ5ZjYwMGFkYjM5ZTcwMWM0MDA4NzJkYjdhNTk3NmY3IiwidWlkIjoiU0EwMDAxIiwibmFtZSI6IlN1cGVyIEFkbWluIiwiZW1haWwiOiJzdXBlcmFkbWluQHBsZXN0aWNrZXQuY29tIiwicm9sZSI6IlNVUEVSX0FETUlOIiwiaXNfb3JnYW5pemVyIjpmYWxzZX0.VKalp0OgmzZvQOeCC8BohuPLsO781Gk11G0tnrZssek",
+        "user": {
+          "id": 1,
+          "uid": "SA0001",
+          "name": "Super Admin",
+          "username": null,
+          "email": "superadmin@plesticket.com",
+          "phone": null,
+          "date_of_birth": null,
+          "photo": null,
+          "role": "SUPER_ADMIN",
+          "role_label": "Super Admin",
+          "is_organizer": false,
+          "is_active": true,
+          "created_at": "2026-08-26T15:50:51.000000Z"
+        }
+      }
+    }
+  },
+  "LOGIN bad password": {
+    "status": 401,
+    "body": {
+      "status": "error",
+      "message": "Invalid email or password."
+    }
+  },
+  "LOGIN validation": {
+    "status": 422,
+    "body": {
+      "status": "error",
+      "message": "Validation failed",
+      "errors": {
+        "email": [
+          "The email field is required."
+        ],
+        "password": [
+          "The password field is required."
+        ]
+      }
+    }
+  },
+  "401 no token": {
+    "status": 401,
+    "body": {
+      "status": "error",
+      "message": "Unauthenticated."
+    }
+  },
+  "users paginated": {
+    "status": 200,
+    "body": {
+      "status": "success",
+      "message": "Users retrieved.",
+      "data": [
+        {
+          "id": 1,
+          "uid": "SA0001",
+          "name": "Super Admin",
+          "username": null,
+          "email": "superadmin@plesticket.com",
+          "phone": null,
+          "date_of_birth": null,
+          "photo": null,
+          "role": "SUPER_ADMIN",
+          "role_label": "Super Admin",
+          "is_organizer": false,
+          "is_active": true,
+          "created_at": "2026-08-26T15:50:51.000000Z"
+        },
+        {
+          "id": 2,
+          "uid": "USR-DEMO-ORG",
+          "name": "Ples Demo Organizer",
+          "username": "ples_demo_organizer",
+          "email": "organizer.demo@plesticket.com",
+          "phone": "081234567890",
+          "date_of_birth": null,
+          "photo": null,
+          "role": "REGISTERED_USER",
+          "role_label": "Registered User",
+          "is_organizer": true,
+          "is_active": true,
+          "created_at": "2026-08-26T15:50:51.000000Z"
+        }
+      ],
+      "meta": {
+        "total": 6,
+        "page": 1,
+        "limit": 2,
+        "pages": 3
+      }
+    }
+  },
+  "admin categories": {
+    "status": 200,
+    "body": {
+      "status": "success",
+      "message": "Categories retrieved.",
+      "data": [
+        {
+          "id": 4,
+          "name": "Arts & Culture",
+          "is_active": true,
+          "created_at": "2026-08-26T15:50:51.000000Z"
+        },
+        {
+          "id": 6,
+          "name": "Business & Finance",
+          "is_active": true,
+          "created_at": "2026-08-26T15:50:51.000000Z"
+        }
+      ],
+      "meta": {
+        "total": 18,
+        "page": 1,
+        "limit": 2,
+        "pages": 9
+      }
+    }
+  },
+  "admin events": {
+    "status": 200,
+    "body": {
+      "status": "success",
+      "message": "Events retrieved.",
+      "data": [
+        {
+          "id": "01a03ec4-5f28-73b9-8844-d6fc3c141e7d",
+          "event_id": "EVT9001",
+          "title": "Jakarta September Music Fest 2026",
+          "slug": "jakarta-september-music-fest-2026",
+          "description": "A full-day music festival featuring local artists and bands.",
+          "category": "Music",
+          "banner_url": null,
+          "pic": {
+            "name": "Ples Demo Organizer",
+            "identity_type": "ktp",
+            "identity_type_label": "KTP",
+            "identity_number": "3173000000000001",
+            "npwp": "01.234.567.8-901.000"
+          },
+          "schedule": {
+            "start_date": "2026-09-05",
+            "end_date": "2026-09-05",
+            "start_time": "15:00:00",
+            "end_time": "23:00:00"
+          },
+          "location": {
+            "is_online": false,
+            "venue_name": "Lapangan Banteng",
+            "address": "Pasar Baru, Sawah Besar",
+            "city": "Kota Jakarta Pusat",
+            "province": "DKI Jakarta",
+            "latitude": "-6.1701000",
+            "longitude": "106.8355000"
+          },
+          "verification_status": "verified",
+          "verification_label": "Verified",
+          "rejection_reason": null,
+          "verified_at": "2026-08-26T15:50:51.000000Z",
+          "show_status": true,
+          "is_published": true,
+          "created_at": "2026-08-26T15:50:51.000000Z",
+          "organizer": {
+            "id": 2,
+            "uid": "USR-DEMO-ORG",
+            "name": "Ples Demo Organizer",
+            "username": "ples_demo_organizer",
+            "email": "organizer.demo@plesticket.com",
+            "phone": "081234567890",
+            "date_of_birth": null,
+            "photo": null,
+            "role": "REGISTERED_USER",
+            "role_label": "Registered User",
+            "is_organizer": true,
+            "is_active": true,
+            "created_at": "2026-08-26T15:50:51.000000Z"
+          },
+          "verified_by": {
+            "id": 1,
+            "uid": "SA0001",
+            "name": "Super Admin",
+            "username": null,
+            "email": "superadmin@plesticket.com",
+            "phone": null,
+            "date_of_birth": null,
+            "photo": null,
+            "role": "SUPER_ADMIN",
+            "role_label": "Super Admin",
+            "is_organizer": false,
+            "is_active": true,
+            "created_at": "2026-08-26T15:50:51.000000Z"
+          }
+        }
+      ],
+      "meta": {
+        "total": 5,
+        "page": 1,
+        "limit": 1,
+        "pages": 5
+      }
+    }
+  },
+  "admin talents": {
+    "status": 500,
+    "body": {
+      "status": "error",
+      "message": "SQLSTATE[42S02]: Base table or view not found: 1146 Table 'u994554137_plesticketdev.talent' doesn't exist (Connection: mysql, Host: 127.0.0.1, Port: 3306, Database: u994554137_plesticketdev, SQL: select count(*) as aggregate from `talent`)"
+    }
+  },
+  "category validation": {
+    "status": 422,
+    "body": {
+      "status": "error",
+      "message": "Validation failed",
+      "errors": {
+        "name": [
+          "The name field is required."
+        ]
+      }
+    }
+  },
+  "404 unknown user": {
+    "status": 500,
+    "body": {
+      "status": "error",
+      "message": "User not found."
+    }
+  }
+}

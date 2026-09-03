@@ -11,6 +11,8 @@ class Talent extends Model
 {
     use SoftDeletes;
 
+    protected $table = 'talents';
+
     protected $fillable = [
         'name', 'slug', 'type', 'category', 'genre', 'photo', 'bio', 'origin_city',
         'contact_name', 'contact_phone', 'contact_email',
@@ -22,7 +24,7 @@ class Talent extends Model
     {
         return [
             'is_verified' => 'boolean',
-            'is_active'   => 'boolean',
+            'is_active' => 'boolean',
         ];
     }
 
