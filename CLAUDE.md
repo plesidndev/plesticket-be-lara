@@ -77,8 +77,10 @@ events and buy tickets to someone else's. `UserRole` stays two-valued
 (`SUPER_ADMIN`, `REGISTERED_USER`).
 
 - Activate with `POST /api/eo/activate` (self-serve, idempotent). It returns a
-  **replacement token** — the caller's existing JWT claims `is_organizer:false`
-  and would be refused until it expired. Clients must swap it in.
+  replacement token. Authorization does **not** depend on swapping it in — the
+  `eo` middleware reads `is_organizer` from the database, so the pre-activation
+  token keeps working immediately. The swap only stops a frontend that decodes
+  the JWT from reading a stale `is_organizer:false` claim.
 - Gate EO-only routes with the `eo` middleware:
   `Route::middleware(['auth:api', 'eo'])`
 - The JWT and `UserResource` both carry `is_organizer`, so a frontend can gate

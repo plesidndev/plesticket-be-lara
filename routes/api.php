@@ -141,11 +141,17 @@ Route::post('/webhooks/xendit', XenditWebhookController::class);
 
 // Talents — public directory
 Route::get('/talents', [TalentController::class, 'index']);
+
+// Must be declared before /talents/{id} — Laravel matches in registration
+// order, so otherwise "mine" is swallowed as an id and TalentController::show()
+// throws a TypeError on its int $id parameter.
+Route::get('/talents/mine', [TalentController::class, 'mine'])
+    ->middleware(['auth:api', 'eo']);
+
 Route::get('/talents/{id}', [TalentController::class, 'show']);
 
 // Talents — authenticated EO can submit/update/delete own
 Route::middleware(['auth:api', 'eo'])->group(function () {
-    Route::get('/talents/mine', [TalentController::class, 'mine']);
     Route::post('/talents', [TalentController::class, 'store']);
     Route::put('/talents/{id}', [TalentController::class, 'update']);
     Route::delete('/talents/{id}', [TalentController::class, 'destroy']);

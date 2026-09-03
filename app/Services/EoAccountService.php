@@ -32,8 +32,9 @@ class EoAccountService
             $user->save();
         }
 
-        // The old token still claims is_organizer:false and would keep the EO
-        // app locked out until it expired, so mint a replacement.
+        // Mint a replacement so a client reading the JWT sees the new value.
+        // Access itself does not need it — the `eo` middleware checks the
+        // database, not the claim.
         JWTAuth::factory()->setTTL(config('jwt.ttl'));
         $token = JWTAuth::fromUser($user->fresh());
 

@@ -70,7 +70,7 @@
     },
     {
       "key": "organizer_uid",
-      "value": "AGT0001"
+      "value": "EVT9001-AGT-0001"
     },
     {
       "key": "talent_id",
@@ -397,7 +397,7 @@
           "request": {
             "method": "POST",
             "url": "{{base_url}}/eo/activate",
-            "description": "Turns the signed-in account into an event organizer. Returns a REPLACEMENT token - the old one still claims is_organizer:false and will be refused by EO routes. The test script swaps it in automatically."
+            "description": "Turns the signed-in account into an event organizer. Idempotent.\n\nReturns a replacement token and the test script swaps it in, but that is cosmetic: the `eo` middleware reads is_organizer from the database, so the token you already hold authorizes EO routes immediately. The swap only keeps a client that decodes the JWT from seeing a stale is_organizer:false."
           },
           "event": [
             {
@@ -413,7 +413,7 @@
           ]
         }
       ],
-      "description": "One users table, one login endpoint, shared by both frontends. is_organizer is a flag, not a role - the same account can organise events and buy tickets to someone else's. Run 'Activate Organizer Access' to set it; that returns a REPLACEMENT token which the test script swaps in automatically."
+      "description": "One users table, one login endpoint, shared by both frontends. is_organizer is a flag, not a role - the same account can organise events and buy tickets to someone else's. Run 'Activate Organizer Access' to set it. It returns a replacement token (swapped in automatically), though the previous token also keeps working - the gate checks the database, not the JWT claim."
     },
     {
       "name": "Buyer App",
@@ -1028,6 +1028,30 @@
       "name": "Super Admin Console",
       "item": [
         {
+          "name": "Admin Summary",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/admin/summary",
+            "description": "Dashboard counters. Returns a flat object, not a list:\n\npending_events, verified_events, active_users, active_categories,\npending_talents, refunds_requiring_attention, webhooks_requiring_attention\n\nThe last two are operational alerts - non-zero means someone should look at the two queues below."
+          }
+        },
+        {
+          "name": "Refund Queue",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/admin/operations/refunds?limit=20",
+            "description": "Payments with requires_refund = true: real money owed back. Set when a buyer paid twice (they switched payment method and paid both) or paid an order the expiry sweeper had already released.\n\nPaginated (meta.page/limit/pages), newest paid first, limit capped at 100.\nRows: id, reference_id, order_number, provider, status, amount, paid_at.\n\nNothing clears this automatically - it is a work queue, not a log."
+          }
+        },
+        {
+          "name": "Webhook Attention Queue",
+          "request": {
+            "method": "GET",
+            "url": "{{base_url}}/admin/operations/webhooks?limit=20",
+            "description": "Webhook deliveries with status 'unmatched' or 'failed'.\n\n  unmatched - verified callback that matched no payment; money may have moved\n              with nothing on our side to attach it to\n  failed    - processing threw; error column holds why, and the provider retries\n\nPaginated, newest first, limit capped at 100.\nRows: id, provider, event_type, reference_id, status, error, created_at."
+          }
+        },
+        {
           "name": "List Admin Categories",
           "request": {
             "method": "GET",
@@ -1173,7 +1197,7 @@
           }
         }
       ],
-      "description": "Platform administration: user management, event verification, talent verification, categories. Requires role:SUPER_ADMIN - run Super Admin Login first, which overwrites {{platform_token}}."
+      "description": "Platform administration: user management, event verification, talent verification, categories. Requires role:SUPER_ADMIN - run Super Admin Login first, which overwrites {{platform_token}}.\n\nNOTE: Admin Summary and the two operations queues exist in the repo but were NOT yet deployed to dev when last checked - they return 'Endpoint not found.' there until the next deploy."
     },
     {
       "name": "Webhooks (provider callbacks)",

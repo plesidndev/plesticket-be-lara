@@ -17,9 +17,10 @@ class EoAccountController extends Controller
     /**
      * Activates the signed-in account as an event organizer.
      *
-     * Returns a replacement token: the caller's current one carries
-     * is_organizer:false and would be refused by the `eo` middleware until it
-     * expired. Clients must swap it in.
+     * Returns a replacement token. This is a convenience, not a requirement:
+     * the `eo` middleware reads is_organizer from the database, so the caller's
+     * existing token authorizes fine straight away. The replacement only keeps
+     * a client that decodes the JWT from reading a stale is_organizer:false.
      */
     public function activate(): JsonResponse
     {
