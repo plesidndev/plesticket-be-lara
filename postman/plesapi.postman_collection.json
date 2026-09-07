@@ -87,6 +87,22 @@
     {
       "key": "xendit_callback_token",
       "value": ""
+    },
+    {
+      "key": "catalog_release_id",
+      "value": ""
+    },
+    {
+      "key": "catalog_asset_id",
+      "value": ""
+    },
+    {
+      "key": "catalog_version",
+      "value": "1"
+    },
+    {
+      "key": "catalog_track_id",
+      "value": "5698fdb4-783a-4d67-80f6-90b4076f5a32"
     }
   ],
   "item": [
@@ -1229,6 +1245,833 @@
         "type": "noauth"
       },
       "description": "Simulates provider callbacks locally. No auth - verified by the x-callback-token header instead."
+    },
+    {
+      "name": "PlesConnect Catalog",
+      "description": "Active PlesConnect account; organizer access is not required. See docs/catalog-api.md. Set catalog_asset_id from the upload response and catalog_version from the submission response.",
+      "item": [
+        {
+          "name": "Genre dropdown",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/genres"
+          }
+        },
+        {
+          "name": "Language dropdown",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/languages"
+          }
+        },
+        {
+          "name": "Catalog options",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/options"
+          }
+        },
+        {
+          "name": "My catalog",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/releases?limit=20"
+          }
+        },
+        {
+          "name": "Create music draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/releases",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"music\",\n  \"title\": \"Langit Baru\",\n  \"metadata\": {\n    \"release_type\": \"single\",\n    \"artists\": [\n      {\n        \"name\": \"Nama Artis\",\n        \"role\": \"primary\"\n      }\n    ],\n    \"primary_genre\": \"pop\",\n    \"language\": \"id\",\n    \"copyright_year\": 2026,\n    \"copyright_owner\": \"Nama Artis\",\n    \"recording_year\": 2026,\n    \"recording_owner\": \"Nama Artis\",\n    \"release_date\": \"2026-10-15\",\n    \"territories\": [\n      \"WORLD\"\n    ],\n    \"stores\": [\n      \"spotify\"\n    ],\n    \"rights_confirmed\": true,\n    \"tracks\": [\n      {\n        \"id\": \"{{catalog_track_id}}\",\n        \"title\": \"Langit Baru\",\n        \"artists\": [\n          {\n            \"name\": \"Nama Artis\",\n            \"role\": \"primary\"\n          }\n        ],\n        \"contributors\": [\n          {\n            \"name\": \"Nama Penulis\",\n            \"role\": \"songwriter\"\n          }\n        ],\n        \"language\": \"id\",\n        \"explicit\": \"no\",\n        \"ai_usage\": \"none\",\n        \"instrumental\": false\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "if (pm.response.code === 201) { pm.collectionVariables.set(\"catalog_release_id\", pm.response.json().data.id); }"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "Create music video draft",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/releases",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"type\": \"music_video\",\n  \"title\": \"Langit Baru Video\",\n  \"metadata\": {\n    \"artists\": [\n      {\n        \"name\": \"Nama Artis\",\n        \"role\": \"primary\"\n      }\n    ],\n    \"primary_genre\": \"pop\",\n    \"language\": \"id\",\n    \"copyright_year\": 2026,\n    \"copyright_owner\": \"Nama Artis\",\n    \"recording_year\": 2026,\n    \"recording_owner\": \"Nama Artis\",\n    \"release_date\": \"2026-10-15\",\n    \"territories\": [\n      \"WORLD\"\n    ],\n    \"stores\": [\n      \"apple_music_video\"\n    ],\n    \"rights_confirmed\": true,\n    \"contributors\": [\n      {\n        \"name\": \"Nama Penulis\",\n        \"role\": \"songwriter\"\n      }\n    ],\n    \"explicit\": \"no\",\n    \"ai_usage\": \"none\",\n    \"instrumental\": false\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Release details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/releases/{{catalog_release_id}}"
+          }
+        },
+        {
+          "name": "Save draft metadata (full replacement)",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/releases/{{catalog_release_id}}",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"metadata\": {\n    \"release_type\": \"single\",\n    \"artists\": [\n      {\n        \"name\": \"Nama Artis\",\n        \"role\": \"primary\"\n      }\n    ],\n    \"primary_genre\": \"pop\",\n    \"language\": \"id\",\n    \"copyright_year\": 2026,\n    \"copyright_owner\": \"Nama Artis\",\n    \"recording_year\": 2026,\n    \"recording_owner\": \"Nama Artis\",\n    \"release_date\": \"2026-10-15\",\n    \"territories\": [\n      \"WORLD\"\n    ],\n    \"stores\": [\n      \"spotify\"\n    ],\n    \"rights_confirmed\": true,\n    \"tracks\": [\n      {\n        \"id\": \"{{catalog_track_id}}\",\n        \"title\": \"Langit Baru\",\n        \"artists\": [\n          {\n            \"name\": \"Nama Artis\",\n            \"role\": \"primary\"\n          }\n        ],\n        \"contributors\": [\n          {\n            \"name\": \"Nama Penulis\",\n            \"role\": \"songwriter\"\n          }\n        ],\n        \"language\": \"id\",\n        \"explicit\": \"no\",\n        \"ai_usage\": \"none\",\n        \"instrumental\": false\n      }\n    ]\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Upload artwork",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/releases/{{catalog_release_id}}/assets",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "kind",
+                  "value": "artwork",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload audio",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/releases/{{catalog_release_id}}/assets",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "kind",
+                  "value": "audio",
+                  "type": "text"
+                },
+                {
+                  "key": "track_id",
+                  "value": "{{catalog_track_id}}",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Upload video",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/releases/{{catalog_release_id}}/assets",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "kind",
+                  "value": "video",
+                  "type": "text"
+                },
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": []
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Download original asset",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/releases/{{catalog_release_id}}/assets/{{catalog_asset_id}}"
+          }
+        },
+        {
+          "name": "Remove draft asset",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/releases/{{catalog_release_id}}/assets/{{catalog_asset_id}}"
+          }
+        },
+        {
+          "name": "Submit for review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/releases/{{catalog_release_id}}/submit"
+          }
+        },
+        {
+          "name": "Request a correction",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/releases/{{catalog_release_id}}/change-requests",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Please let me correct the title.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Read submitted version",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/releases/{{catalog_release_id}}/submissions/{{catalog_version}}"
+          }
+        },
+        {
+          "name": "Delete unsubmitted draft",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/releases/{{catalog_release_id}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Catalog Admin",
+      "description": "Active SUPER_ADMIN token required. Partner records are internal-only. Manual workflow; no external API requests.",
+      "item": [
+        {
+          "name": "Review queue",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/releases?status=waiting_for_review"
+          }
+        },
+        {
+          "name": "Admin release details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/releases/{{catalog_release_id}}"
+          }
+        },
+        {
+          "name": "Assign reviewer",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/releases/{{catalog_release_id}}/assignment",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"assigned_admin_id\": null\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Start review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/releases/{{catalog_release_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": \"{{catalog_version}}\",\n  \"status\": \"under_review\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Request changes",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/releases/{{catalog_release_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": \"{{catalog_version}}\",\n  \"status\": \"changes_requested\",\n  \"message\": \"Please correct the title.\",\n  \"fields\": [\n    {\n      \"field\": \"title\",\n      \"message\": \"Match the cover.\"\n    }\n  ]\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Approve",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/releases/{{catalog_release_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": \"{{catalog_version}}\",\n  \"status\": \"approved\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Reject",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/releases/{{catalog_release_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": \"{{catalog_version}}\",\n  \"status\": \"rejected\",\n  \"message\": \"The submission cannot proceed.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Internal note",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/releases/{{catalog_release_id}}/notes",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"message\": \"Internal distribution notes.\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Record manual distribution",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/releases/{{catalog_release_id}}/distribution",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": \"{{catalog_version}}\",\n  \"provider\": \"onerpm\",\n  \"reference\": \"REPLACE-WITH-PARTNER-ID\",\n  \"submitted_at\": \"2026-09-07T10:00:00+07:00\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Mark processing distribution",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/releases/{{catalog_release_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": \"{{catalog_version}}\",\n  \"status\": \"processing_distribution\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Confirm store live",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/releases/{{catalog_release_id}}/stores/spotify",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": \"{{catalog_version}}\",\n  \"status\": \"live\",\n  \"url\": \"https://open.spotify.com/album/REPLACE-ME\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Mark scheduled",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/releases/{{catalog_release_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": \"{{catalog_version}}\",\n  \"status\": \"scheduled\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Mark all stores live",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/releases/{{catalog_release_id}}/status",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"version\": \"{{catalog_version}}\",\n  \"status\": \"live\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Admin download original",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/releases/{{catalog_release_id}}/assets/{{catalog_asset_id}}"
+          }
+        },
+        {
+          "name": "Read submitted version",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/releases/{{catalog_release_id}}/submissions/{{catalog_version}}"
+          }
+        },
+        {
+          "name": "Export submission ZIP",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/releases/{{catalog_release_id}}/submissions/{{catalog_version}}/export"
+          }
+        },
+        {
+          "name": "List genres (including inactive)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/genres"
+          }
+        },
+        {
+          "name": "Create genre",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/genres",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"shoegaze\",\n  \"name\": \"Shoegaze\",\n  \"sort_order\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update genre",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/genres/shoegaze",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List languages (including inactive)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/languages"
+          }
+        },
+        {
+          "name": "Create language",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/languages",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"vi\",\n  \"name\": \"Vietnamese\",\n  \"is_active\": true\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update language",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/languages/vi",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sort_order\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        }
+      ]
     }
   ]
 }

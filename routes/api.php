@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AdminCatalogController;
 use App\Http\Controllers\Api\AdminOperationsController;
 use App\Http\Controllers\Api\AdminSummaryController;
 use App\Http\Controllers\Api\AgentEventController;
@@ -7,6 +8,8 @@ use App\Http\Controllers\Api\AgentOrderController;
 use App\Http\Controllers\Api\AgentSummaryController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BankController;
+use App\Http\Controllers\Api\CatalogController;
+use App\Http\Controllers\Api\CatalogMasterDataController;
 use App\Http\Controllers\Api\CategoryController;
 use App\Http\Controllers\Api\CityController;
 use App\Http\Controllers\Api\EoAccountController;
@@ -24,6 +27,7 @@ use App\Http\Controllers\Api\TalentController;
 use App\Http\Controllers\Api\TicketController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\Webhook\XenditWebhookController;
+use App\Http\Middleware\EnsureCatalogAccess;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn () => response()->json(['status' => 'ok']));
@@ -195,4 +199,44 @@ Route::middleware(['auth:organizer', 'role:MITRA_TICKET_BOX'])->prefix('agent')-
     Route::post('/orders', [AgentOrderController::class, 'store']);
     Route::get('/orders/{orderNumber}', [AgentOrderController::class, 'show']);
     Route::get('/summary', AgentSummaryController::class);
+});
+
+// Catalog identity is independent of event organizer capabilities.
+Route::middleware(['auth:api', EnsureCatalogAccess::class])->prefix('catalog')->group(function () {
+    Route::get('/options', [CatalogController::class, 'options']);
+    Route::get('/{masterType}', [CatalogMasterDataController::class, 'index'])->where('masterType', 'genres|languages');
+    Route::get('/releases', [CatalogController::class, 'index']);
+    Route::post('/releases', [CatalogController::class, 'store'])->middleware('throttle:catalog-create');
+    Route::prefix('releases/{release}')->whereUuid('release')->group(function () {
+        Route::get('/', [CatalogController::class, 'show']);
+        Route::patch('/', [CatalogController::class, 'update']);
+        Route::delete('/', [CatalogController::class, 'destroy']);
+        Route::post('/assets', [CatalogController::class, 'upload'])->middleware('throttle:catalog-upload');
+        Route::get('/assets/{asset}', [CatalogController::class, 'download'])->whereUuid('asset');
+        Route::delete('/assets/{asset}', [CatalogController::class, 'removeAsset'])->whereUuid('asset');
+        Route::post('/submit', [CatalogController::class, 'submit'])->middleware('throttle:catalog-submit');
+        Route::post('/change-requests', [CatalogController::class, 'requestChange'])->middleware('throttle:catalog-change-request');
+        Route::get('/submissions/{version}', [CatalogController::class, 'submission'])->whereNumber('version');
+    });
+});
+
+Route::middleware(['auth:api', 'role:SUPER_ADMIN', EnsureCatalogAccess::class.':admin'])->prefix('admin/catalog/releases')->group(function () {
+    Route::get('/', [AdminCatalogController::class, 'index']);
+    Route::prefix('{release}')->whereUuid('release')->group(function () {
+        Route::get('/', [AdminCatalogController::class, 'show']);
+        Route::post('/status', [AdminCatalogController::class, 'transition']);
+        Route::patch('/assignment', [AdminCatalogController::class, 'assign']);
+        Route::post('/notes', [AdminCatalogController::class, 'note']);
+        Route::put('/distribution', [AdminCatalogController::class, 'distribution']);
+        Route::put('/stores/{store}', [AdminCatalogController::class, 'delivery']);
+        Route::get('/assets/{asset}', [AdminCatalogController::class, 'download'])->whereUuid('asset');
+        Route::get('/submissions/{version}', [AdminCatalogController::class, 'submission'])->whereNumber('version');
+        Route::get('/submissions/{version}/export', [AdminCatalogController::class, 'export'])->whereNumber('version')->middleware('throttle:catalog-export');
+    });
+});
+
+Route::middleware(['auth:api', 'role:SUPER_ADMIN', EnsureCatalogAccess::class.':admin'])->prefix('admin/catalog')->group(function () {
+    Route::get('/{masterType}', [CatalogMasterDataController::class, 'adminIndex'])->where('masterType', 'genres|languages');
+    Route::post('/{masterType}', [CatalogMasterDataController::class, 'store'])->where('masterType', 'genres|languages');
+    Route::patch('/{masterType}/{code}', [CatalogMasterDataController::class, 'update'])->where('masterType', 'genres|languages');
 });

@@ -3,29 +3,35 @@
 namespace App\Providers;
 
 use App\Repositories\BankRepository;
+use App\Repositories\CatalogMasterDataRepository;
+use App\Repositories\CatalogRepository;
 use App\Repositories\CategoryRepository;
 use App\Repositories\CityRepository;
 use App\Repositories\Contracts\BankRepositoryInterface;
+use App\Repositories\Contracts\CatalogMasterDataRepositoryInterface;
+use App\Repositories\Contracts\CatalogRepositoryInterface;
 use App\Repositories\Contracts\CategoryRepositoryInterface;
 use App\Repositories\Contracts\CityRepositoryInterface;
 use App\Repositories\Contracts\EventRepositoryInterface;
 use App\Repositories\Contracts\OrderRepositoryInterface;
 use App\Repositories\Contracts\OrganizerMemberRepositoryInterface;
+use App\Repositories\Contracts\PaymentRepositoryInterface;
+use App\Repositories\Contracts\ProvinceRepositoryInterface;
+use App\Repositories\Contracts\TalentRepositoryInterface;
 use App\Repositories\Contracts\TicketRepositoryInterface;
 use App\Repositories\Contracts\TicketTypeRepositoryInterface;
-use App\Repositories\TicketTypeRepository;
-use App\Repositories\Contracts\PaymentRepositoryInterface;
-use App\Repositories\Contracts\WebhookDeliveryRepositoryInterface;
-use App\Repositories\Contracts\ProvinceRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Repositories\Contracts\WebhookDeliveryRepositoryInterface;
 use App\Repositories\EventRepository;
 use App\Repositories\OrderRepository;
 use App\Repositories\OrganizerMemberRepository;
 use App\Repositories\PaymentRepository;
-use App\Repositories\WebhookDeliveryRepository;
 use App\Repositories\ProvinceRepository;
+use App\Repositories\TalentRepository;
 use App\Repositories\TicketRepository;
+use App\Repositories\TicketTypeRepository;
 use App\Repositories\UserRepository;
+use App\Repositories\WebhookDeliveryRepository;
 use App\Services\Payments\Gateways\XenditGateway;
 use Illuminate\Support\ServiceProvider;
 
@@ -33,6 +39,8 @@ class RepositoryServiceProvider extends ServiceProvider
 {
     public function register(): void
     {
+        $this->app->bind(CatalogMasterDataRepositoryInterface::class, CatalogMasterDataRepository::class);
+        $this->app->bind(CatalogRepositoryInterface::class, CatalogRepository::class);
         $this->app->bind(UserRepositoryInterface::class, UserRepository::class);
         $this->app->bind(ProvinceRepositoryInterface::class, ProvinceRepository::class);
         $this->app->bind(CityRepositoryInterface::class, CityRepository::class);
@@ -43,18 +51,18 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(TicketTypeRepositoryInterface::class, TicketTypeRepository::class);
         $this->app->bind(OrderRepositoryInterface::class, OrderRepository::class);
         $this->app->bind(TicketRepositoryInterface::class, TicketRepository::class);
-        $this->app->bind(\App\Repositories\Contracts\TalentRepositoryInterface::class, \App\Repositories\TalentRepository::class);
+        $this->app->bind(TalentRepositoryInterface::class, TalentRepository::class);
         $this->app->bind(PaymentRepositoryInterface::class, PaymentRepository::class);
         $this->app->bind(WebhookDeliveryRepositoryInterface::class, WebhookDeliveryRepository::class);
 
         // Gateways take their credentials as constructor scalars, so they are
         // built explicitly rather than autowired.
-        $this->app->singleton(XenditGateway::class, fn() => new XenditGateway(
-            secretKey:     config('services.xendit.secret_key'),
+        $this->app->singleton(XenditGateway::class, fn () => new XenditGateway(
+            secretKey: config('services.xendit.secret_key'),
             callbackToken: config('services.xendit.callback_token'),
-            baseUrl:       config('services.xendit.base_url'),
-            timeout:       (int) config('services.xendit.timeout'),
-            apiVersion:    (string) config('services.xendit.api_version'),
+            baseUrl: config('services.xendit.base_url'),
+            timeout: (int) config('services.xendit.timeout'),
+            apiVersion: (string) config('services.xendit.api_version'),
         ));
     }
 }

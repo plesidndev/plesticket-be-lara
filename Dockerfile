@@ -30,6 +30,7 @@ WORKDIR /var/www/html
 COPY --from=builder /var/www/html .
 
 COPY docker/nginx.conf /etc/nginx/nginx.conf
+COPY docker/catalog.ini /usr/local/etc/php/conf.d/catalog.ini
 COPY docker/supervisord.conf /etc/supervisor/conf.d/supervisord.conf
 
 RUN chown -R www-data:www-data storage bootstrap/cache \

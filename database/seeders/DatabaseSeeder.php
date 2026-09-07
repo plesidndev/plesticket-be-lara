@@ -12,6 +12,7 @@ class DatabaseSeeder extends Seeder
             SuperAdminSeeder::class,
             BankSeeder::class,
             CategorySeeder::class,
+            CatalogMasterDataSeeder::class,
             ProvinceSeeder::class,
             CitySeeder::class,
             DummyEventSeeder::class,

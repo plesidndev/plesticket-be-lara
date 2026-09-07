@@ -2,6 +2,10 @@
 
 REST API backend for the Plesticket ticketing platform, built with Laravel 13 and PHP 8.3.
 
+PlesConnect music and music-video submissions, admin review, and manual distribution
+tracking are documented in [Catalog API](docs/catalog-api.md). Postman includes
+**PlesConnect Catalog** and **Catalog Admin** request folders.
+
 ## Tech Stack
 
 - **Language:** PHP 8.3
