@@ -31,6 +31,8 @@ class CatalogController extends Controller
             'music_stores' => config('catalog.music_stores'), 'video_stores' => config('catalog.video_stores'),
             'genres' => CatalogMasterDataResource::collection($masters->list('genres')),
             'languages' => CatalogMasterDataResource::collection($masters->list('languages')),
+            'territories' => CatalogMasterDataResource::collection($masters->list('territories')),
+            'timezones' => CatalogMasterDataResource::collection($masters->list('timezones')),
             'ai_usage' => ['none', 'assisted', 'generated'], 'explicit' => ['no', 'yes', 'clean'],
             'uploads' => [
                 'audio' => ['extensions' => ['wav', 'flac'], 'max_kb' => config('catalog.max_audio_kb')],

@@ -5,6 +5,8 @@ namespace App\Repositories;
 use App\Models\CatalogGenre;
 use App\Models\CatalogLanguage;
 use App\Models\CatalogMasterEntry;
+use App\Models\CatalogTerritory;
+use App\Models\CatalogTimezone;
 use App\Repositories\Contracts\CatalogMasterDataRepositoryInterface;
 use Illuminate\Support\Collection;
 
@@ -44,6 +46,8 @@ class CatalogMasterDataRepository implements CatalogMasterDataRepositoryInterfac
         return match ($type) {
             'genres' => CatalogGenre::class,
             'languages' => CatalogLanguage::class,
+            'territories' => CatalogTerritory::class,
+            'timezones' => CatalogTimezone::class,
             default => throw new \InvalidArgumentException('Unknown catalog master data type.'),
         };
     }

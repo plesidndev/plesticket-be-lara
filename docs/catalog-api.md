@@ -102,9 +102,8 @@ is provided), `preorder`, `preorder_date` (required for preorder and before rele
 Original release date cannot be after the requested release date.
 
 Territories use `['WORLD']` alone or uppercase two-letter country codes.
-Genres and languages use active master-data codes (see below). Pricing remains
-optional free text for the reviewer. Territory code validation currently checks
-shape, not an ISO registry.
+Genres, languages, territories, and timezones use active master-data codes (see below).
+Pricing remains optional free text for the reviewer.
 
 Optional track fields: `version`, `lyrics`, `isrc`, `preview_start_seconds`.
 Video metadata also accepts `lyrics` and `isrc`.
@@ -243,7 +242,7 @@ the archive. Temporary export files are deleted after the response is sent.
 Run `php artisan migrate`, `php artisan db:seed --class=CatalogMasterDataSeeder`,
 and `php artisan config:clear` using PHP compatible with
 the installed Laravel dependencies (this implementation was tested on PHP 8.5).
-The catalog migrations add seven `catalog_*` tables and do not change existing
+The catalog migrations add nine `catalog_*` tables and do not change existing
 users/events. The master-data seeder adds starter entries without overwriting
 admin edits or reactivating disabled entries.
 
@@ -315,3 +314,82 @@ created before master data was added retain their original free-text metadata.
 The starter list contains 22 genres and 16 languages. This is PlesConnect's initial
 vocabulary, not a complete copy of ONErpm's dropdowns; admins can extend it after
 confirming the required choices with the distribution team.
+
+
+## Territory master data
+
+Table: `catalog_territories`. The seed includes 249 country/territory entries from
+ISO 3166-1 data plus the PlesConnect `WORLD` option (250 entries total).
+Country codes are uppercase, e.g. `ID`, `SG`, `US`. `WORLD` is a separate worldwide
+selection, not a country code. Dropdown entries include `code`, `name`,
+`is_active`, and `sort_order`; Worldwide is sorted first by default.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/catalog/territories` | Active territory dropdown (PlesConnect account) |
+| GET | `/api/admin/catalog/territories` | All territories, including inactive (SUPER_ADMIN) |
+| POST | `/api/admin/catalog/territories` | Add a missing entry using a code recognized by the bundled dataset |
+| PATCH | `/api/admin/catalog/territories/{code}` | Rename, reorder, or activate/deactivate |
+
+`GET /api/catalog/options` also includes the active `territories` list.
+
+Send `metadata.territories: ["WORLD"]` or individual codes such as `["ID", "SG"]`.
+Names, lowercase codes, unknown codes, duplicates, and combining WORLD with country
+codes are rejected. Active selections are checked both on metadata saves and at
+submission. Deactivating a country hides it from the dropdown and prevents explicit
+selection; it does not redefine WORLD as "all active countries". WORLD still means
+worldwide distribution intent. Deactivate WORLD separately if it should not be offered.
+The distribution team must still review territorial rights and partner eligibility.
+
+Codes are immutable; entries are deactivated rather than deleted. Admin code
+creation checks the bundled ISO dataset (or WORLD), so adding a new official code
+requires updating the dataset first. Names and activation states can be customized
+without being overwritten on reseed. Customer snapshots and exports include frozen
+territory labels in `master_data`, as they do for genres and languages.
+
+Apply `php artisan migrate`, then `php artisan db:seed --class=CatalogTerritorySeeder`
+(or `CatalogMasterDataSeeder`, which also seeds territories).
+
+
+## Timezone master data
+
+Table: `catalog_timezones`. The seeder uses PHP's current
+[`DateTimeZone::listIdentifiers(DateTimeZone::ALL)`](https://www.php.net/manual/en/datetimezone.listidentifiers.php)
+list: 419 identifiers on the current development runtime, including `UTC`.
+The count follows the installed PHP timezone database. Codes preserve their exact
+case, such as `Asia/Jakarta`, `Asia/Makassar`, and `Asia/Jayapura`. Labels are
+readable names such as `Asia / Jakarta`; UTC sorts first by default.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/catalog/timezones` | Active timezone dropdown (PlesConnect account) |
+| GET | `/api/admin/catalog/timezones` | All timezones, including inactive (SUPER_ADMIN) |
+| POST | `/api/admin/catalog/timezones` | Add a missing identifier recognized by the PHP runtime |
+| PATCH | `/api/admin/catalog/timezones/{code}` | Rename, reorder, or activate/deactivate |
+
+`GET /api/catalog/options` also includes the active `timezones` list. Each entry
+contains `code`, `name`, `is_active`, and `sort_order`. PATCH accepts slash-containing
+codes, for example `/api/admin/catalog/timezones/Asia/Jakarta` (or `Asia%2FJakarta`).
+Codes are immutable. Use `{"is_active":false}` to deactivate an entry.
+
+Example fields within a complete metadata payload:
+
+```json
+{
+  "release_date": "2026-10-15",
+  "release_time": "09:00",
+  "timezone": "Asia/Jakarta"
+}
+```
+
+Timezone is required when `release_time` is supplied; otherwise it may be omitted
+or null. Supply an exact active code, not a display label or a fixed offset such
+as `+07:00`. Unknown or inactive zones are rejected on metadata saves and submission.
+The seeded list excludes backward-compatibility aliases. Submission snapshots and
+exports freeze timezone labels in `master_data`. Release timing remains metadata
+for manual distribution; these fields do not automatically schedule publication.
+
+Apply `php artisan migrate`, then `php artisan db:seed --class=CatalogTimezoneSeeder`
+(or `CatalogMasterDataSeeder`). Reseeding adds missing identifiers while preserving
+admin labels, order, and activation settings. After updating PHP's timezone database,
+reseed to add new identifiers; existing entries are not automatically removed.

@@ -25,7 +25,7 @@ class CatalogMetadataRules
             'metadata.release_date' => [$required, 'date_format:Y-m-d'],
             'metadata.original_release_date' => ['sometimes', 'nullable', 'date_format:Y-m-d', 'before_or_equal:metadata.release_date'],
             'metadata.release_time' => ['sometimes', 'nullable', 'date_format:H:i'],
-            'metadata.timezone' => ['required_with:metadata.release_time', 'timezone'],
+            'metadata.timezone' => ['required_with:metadata.release_time', 'nullable', 'string', 'max:40', 'timezone'],
             'metadata.territories' => [$required, 'array', 'min:1', 'max:250'],
             'metadata.territories.*' => ['required', 'string', 'distinct', 'regex:/\A(?:WORLD|[A-Z]{2})\z/'],
             'metadata.stores' => [$required, 'array', 'min:1', 'max:100'],

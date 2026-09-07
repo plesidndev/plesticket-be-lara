@@ -1251,6 +1251,32 @@
       "description": "Active PlesConnect account; organizer access is not required. See docs/catalog-api.md. Set catalog_asset_id from the upload response and catalog_version from the submission response.",
       "item": [
         {
+          "name": "Timezone dropdown",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/timezones"
+          }
+        },
+        {
+          "name": "Territory dropdown",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/territories"
+          }
+        },
+        {
           "name": "Genre dropdown",
           "request": {
             "method": "GET",
@@ -2063,6 +2089,110 @@
             "body": {
               "mode": "raw",
               "raw": "{\n  \"sort_order\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List territories (including inactive)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/territories"
+          }
+        },
+        {
+          "name": "Update territory",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/territories/ID",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Indonesia\",\n  \"is_active\": true,\n  \"sort_order\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Deactivate worldwide selection",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/territories/WORLD",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "List timezones (including inactive)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/timezones"
+          }
+        },
+        {
+          "name": "Update timezone",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/timezones/Asia/Jakarta",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jakarta\",\n  \"is_active\": true,\n  \"sort_order\": 10\n}",
               "options": {
                 "raw": {
                   "language": "json"

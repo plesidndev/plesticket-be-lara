@@ -4,6 +4,8 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Database\Seeders\CatalogMasterDataSeeder;
+use Database\Seeders\CatalogTerritorySeeder;
+use Database\Seeders\CatalogTimezoneSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
@@ -338,6 +340,120 @@ class CatalogApiTest extends TestCase
                 'language' => 'Indonesian', 'explicit' => 'no', 'instrumental' => false, 'ai_usage' => 'none',
             ]],
         ];
+    }
+
+    public function test_timezone_lookup_returns_runtime_iana_identifiers_and_validates_release_time(): void
+    {
+        $count = count(\DateTimeZone::listIdentifiers(\DateTimeZone::ALL));
+        $this->actingAs($this->artist, 'api')->getJson('/api/catalog/timezones')->assertOk()->assertJsonCount($count, 'data')
+            ->assertJsonPath('data.0.code', 'UTC')->assertJsonFragment(['code' => 'Asia/Jakarta', 'name' => 'Asia / Jakarta']);
+        $this->getJson('/api/catalog/options')->assertOk()->assertJsonCount($count, 'data.timezones');
+        $draft = $this->draft(['release_time' => '09:00', 'timezone' => 'Asia/Jakarta']);
+        $this->assertSame('Asia/Jakarta', $draft['metadata']['timezone']);
+        foreach (['+07:00', 'Not/A_Zone', 'asia/jakarta', 'Asia / Jakarta'] as $timezone) {
+            $this->postJson('/api/catalog/releases', ['type' => 'music', 'title' => 'Invalid zone', 'metadata' => ['release_time' => '09:00', 'timezone' => $timezone]])->assertUnprocessable()->assertJsonValidationErrors(['metadata.timezone']);
+        }
+        $this->postJson('/api/catalog/releases', ['type' => 'music', 'title' => 'Missing zone', 'metadata' => ['release_time' => '09:00']])->assertUnprocessable()->assertJsonValidationErrors(['metadata.timezone']);
+        $this->postJson('/api/catalog/releases', ['type' => 'music', 'title' => 'Null zone', 'metadata' => ['release_time' => '09:00', 'timezone' => null]])->assertUnprocessable();
+        $this->draft(['timezone' => null]);
+    }
+
+    public function test_admin_can_manage_timezone_codes_with_raw_or_encoded_slashes(): void
+    {
+        $this->actingAs($this->artist, 'api')->getJson('/api/admin/catalog/timezones')->assertForbidden();
+        $this->patchJson('/api/admin/catalog/timezones/Asia/Jakarta', ['is_active' => false])->assertForbidden();
+        $this->actingAs($this->admin, 'api')->patchJson('/api/admin/catalog/timezones/Asia/Jakarta', ['name' => 'Jakarta', 'sort_order' => 1])->assertOk()->assertJsonPath('data.code', 'Asia/Jakarta');
+        $this->patchJson('/api/admin/catalog/timezones/Asia%2FJakarta', ['is_active' => false])->assertOk();
+        $this->patchJson('/api/admin/catalog/timezones/America/Argentina/Buenos_Aires', ['sort_order' => 2])->assertOk();
+        $this->patchJson('/api/admin/catalog/timezones/Asia/Jakarta', ['code' => 'Asia/Singapore'])->assertUnprocessable();
+        $this->patchJson('/api/admin/catalog/timezones/Not/A_Zone', ['name' => 'Missing'])->assertNotFound();
+        $this->postJson('/api/admin/catalog/timezones', ['code' => 'Not/A_Zone', 'name' => 'Invalid'])->assertUnprocessable();
+        $this->postJson('/api/admin/catalog/timezones', ['code' => 'UTC', 'name' => 'Duplicate'])->assertUnprocessable();
+        $this->getJson('/api/admin/catalog/timezones')->assertOk()->assertJsonFragment(['code' => 'Asia/Jakarta', 'name' => 'Jakarta', 'is_active' => false, 'sort_order' => 1]);
+    }
+
+    public function test_inactive_timezones_are_rejected_on_save_and_submission_and_preserved_on_reseed(): void
+    {
+        $metadata = $this->metadata();
+        $metadata['release_time'] = '09:00';
+        $metadata['timezone'] = 'Asia/Jakarta';
+        $id = $this->completeDraft($metadata)['id'];
+        $this->actingAs($this->admin, 'api')->patchJson('/api/admin/catalog/timezones/Asia/Jakarta', ['is_active' => false, 'name' => 'Jakarta custom'])->assertOk();
+        $this->seed(CatalogTimezoneSeeder::class);
+        $this->assertDatabaseCount('catalog_timezones', count(\DateTimeZone::listIdentifiers(\DateTimeZone::ALL)));
+        $this->assertDatabaseHas('catalog_timezones', ['code' => 'Asia/Jakarta', 'is_active' => false, 'name' => 'Jakarta custom']);
+        $this->actingAs($this->artist, 'api')->getJson('/api/catalog/timezones')->assertOk()->assertJsonMissing(['code' => 'Asia/Jakarta']);
+        $this->patchJson("/api/catalog/releases/$id", ['metadata' => $metadata])->assertUnprocessable()->assertJsonValidationErrors(['metadata.timezone']);
+        $this->postJson("/api/catalog/releases/$id/submit")->assertUnprocessable()->assertJsonValidationErrors(['metadata.timezone']);
+        $this->assertDatabaseCount('catalog_submissions', 0);
+    }
+
+    public function test_timezone_labels_are_frozen_in_submitted_snapshots(): void
+    {
+        $metadata = $this->metadata();
+        $metadata['release_time'] = '09:00';
+        $metadata['timezone'] = 'Asia/Jakarta';
+        $id = $this->completeDraft($metadata)['id'];
+        $this->postJson("/api/catalog/releases/$id/submit")->assertOk();
+        $this->actingAs($this->admin, 'api')->patchJson('/api/admin/catalog/timezones/Asia/Jakarta', ['name' => 'Jakarta renamed'])->assertOk();
+        $this->actingAs($this->artist, 'api')->getJson("/api/catalog/releases/$id/submissions/1")->assertOk()->assertJsonFragment([
+            'field' => 'metadata.timezone', 'code' => 'Asia/Jakarta', 'name' => 'Asia / Jakarta',
+        ]);
+    }
+
+    public function test_territory_master_lists_countries_and_world_and_rejects_invalid_selections(): void
+    {
+        $this->actingAs($this->artist, 'api')->getJson('/api/catalog/territories')->assertOk()->assertJsonCount(250, 'data')
+            ->assertJsonPath('data.0.code', 'WORLD')->assertJsonFragment(['code' => 'ID', 'name' => 'Indonesia']);
+        $this->getJson('/api/catalog/options')->assertOk()->assertJsonCount(250, 'data.territories');
+        $draft = $this->draft(['territories' => ['ID', 'SG']]);
+        $this->assertSame(['ID', 'SG'], $draft['metadata']['territories']);
+        foreach ([['ZZ'], ['id'], ['Indonesia'], ['WORLD', 'ID'], ['ID', 'ID']] as $territories) {
+            $this->postJson('/api/catalog/releases', ['type' => 'music', 'title' => 'Invalid', 'metadata' => ['territories' => $territories]])->assertUnprocessable();
+        }
+        $this->actingAs($this->admin, 'api')->patchJson('/api/admin/catalog/territories/FR', ['name' => 'ZZ'])->assertOk();
+        $this->actingAs($this->artist, 'api')->postJson('/api/catalog/releases', ['type' => 'music', 'title' => 'Invalid', 'metadata' => ['territories' => ['ZZ']]])->assertUnprocessable();
+    }
+
+    public function test_territory_deactivation_is_enforced_on_save_and_submission_and_survives_reseeding(): void
+    {
+        $metadata = $this->metadata();
+        $metadata['territories'] = ['ID', 'SG'];
+        $id = $this->completeDraft($metadata)['id'];
+        $this->actingAs($this->admin, 'api')->patchJson('/api/admin/catalog/territories/ID', ['is_active' => false, 'name' => 'Indonesia custom', 'sort_order' => 10])->assertOk();
+        $this->seed(CatalogTerritorySeeder::class);
+        $this->assertDatabaseCount('catalog_territories', 250);
+        $this->assertDatabaseHas('catalog_territories', ['code' => 'ID', 'name' => 'Indonesia custom', 'is_active' => false, 'sort_order' => 10]);
+        $this->getJson('/api/admin/catalog/territories')->assertOk()->assertJsonCount(250, 'data');
+        $this->actingAs($this->artist, 'api')->getJson('/api/catalog/territories')->assertOk()->assertJsonMissing(['code' => 'ID']);
+        $this->postJson("/api/catalog/releases/$id/submit")->assertUnprocessable()->assertJsonValidationErrors(['metadata.territories.0']);
+        $this->patchJson("/api/catalog/releases/$id", ['metadata' => $metadata])->assertUnprocessable();
+        $this->assertDatabaseCount('catalog_submissions', 0);
+    }
+
+    public function test_territory_names_are_preserved_in_submitted_snapshots(): void
+    {
+        $metadata = $this->metadata();
+        $metadata['territories'] = ['ID'];
+        $id = $this->completeDraft($metadata)['id'];
+        $this->postJson("/api/catalog/releases/$id/submit")->assertOk();
+        $this->actingAs($this->admin, 'api')->patchJson('/api/admin/catalog/territories/ID', ['name' => 'Indonesia renamed'])->assertOk();
+        $this->actingAs($this->artist, 'api')->getJson("/api/catalog/releases/$id/submissions/1")->assertOk()->assertJsonFragment([
+            'field' => 'metadata.territories.0', 'code' => 'ID', 'name' => 'Indonesia',
+        ]);
+    }
+
+    public function test_territory_admin_endpoints_require_admin_and_known_immutable_codes(): void
+    {
+        $this->actingAs($this->artist, 'api')->getJson('/api/admin/catalog/territories')->assertForbidden();
+        $this->patchJson('/api/admin/catalog/territories/ID', ['is_active' => false])->assertForbidden();
+        $this->postJson('/api/admin/catalog/territories', ['code' => 'ZZ', 'name' => 'Invalid'])->assertForbidden();
+        $this->actingAs($this->admin, 'api')->postJson('/api/admin/catalog/territories', ['code' => 'ZZ', 'name' => 'Invalid'])->assertUnprocessable();
+        $this->postJson('/api/admin/catalog/territories', ['code' => 'ID', 'name' => 'Duplicate'])->assertUnprocessable();
+        $this->patchJson('/api/admin/catalog/territories/ID', ['code' => 'SG'])->assertUnprocessable();
+        $this->patchJson('/api/admin/catalog/territories/ID', ['name' => 'Singapore'])->assertUnprocessable();
+        $this->patchJson('/api/admin/catalog/territories/WORLD', ['is_active' => false])->assertOk();
+        $this->actingAs($this->artist, 'api')->postJson('/api/catalog/releases', ['type' => 'music', 'title' => 'Worldwide unavailable', 'metadata' => ['territories' => ['WORLD']]])->assertUnprocessable();
     }
 
     private function completeDraft(?array $metadata = null): array
