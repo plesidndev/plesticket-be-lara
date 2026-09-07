@@ -2,6 +2,7 @@
 
 namespace App\Repositories;
 
+use App\Models\CatalogDsp;
 use App\Models\CatalogGenre;
 use App\Models\CatalogLanguage;
 use App\Models\CatalogMasterEntry;
@@ -44,6 +45,7 @@ class CatalogMasterDataRepository implements CatalogMasterDataRepositoryInterfac
     private function model(string $type): string
     {
         return match ($type) {
+            'dsps' => CatalogDsp::class,
             'genres' => CatalogGenre::class,
             'languages' => CatalogLanguage::class,
             'territories' => CatalogTerritory::class,

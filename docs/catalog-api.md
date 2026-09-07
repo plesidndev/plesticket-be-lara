@@ -242,7 +242,7 @@ the archive. Temporary export files are deleted after the response is sent.
 Run `php artisan migrate`, `php artisan db:seed --class=CatalogMasterDataSeeder`,
 and `php artisan config:clear` using PHP compatible with
 the installed Laravel dependencies (this implementation was tested on PHP 8.5).
-The catalog migrations add nine `catalog_*` tables and do not change existing
+The catalog migrations add ten `catalog_*` tables and do not change existing
 users/events. The master-data seeder adds starter entries without overwriting
 admin edits or reactivating disabled entries.
 
@@ -393,3 +393,51 @@ Apply `php artisan migrate`, then `php artisan db:seed --class=CatalogTimezoneSe
 (or `CatalogMasterDataSeeder`). Reseeding adds missing identifiers while preserving
 admin labels, order, and activation settings. After updating PHP's timezone database,
 reseed to add new identifiers; existing entries are not automatically removed.
+
+
+## Destination DSP master data
+
+Destinations are stored in `catalog_dsps`; admins can add them without code changes.
+The seeder preserves the previous 10 destination codes and does not overwrite admin
+changes. Each entry has immutable `code`, editable `name`, `supported_types`
+(`music`, `music_video`, or both), `is_active`, `sort_order`, and `logo_url`.
+Logos are initially null until an admin uploads the image.
+
+| Method | Path | Purpose |
+|---|---|---|
+| GET | `/api/catalog/dsps` | Active destinations with labels, logos, and supported types |
+| GET | `/api/admin/catalog/dsps` | All destinations, including inactive |
+| POST | `/api/admin/catalog/dsps` | Create destination |
+| PATCH | `/api/admin/catalog/dsps/{code}` | Update name, supported types, status, or order |
+| POST | `/api/admin/catalog/dsps/{code}/logo` | Upload or replace logo |
+
+Admin routes require an active SUPER_ADMIN. Example create body:
+
+```json
+{
+  "code": "new_dsp",
+  "name": "New DSP",
+  "supported_types": ["music", "music_video"],
+  "is_active": true,
+  "sort_order": 10
+}
+```
+
+Upload a logo using multipart form-data with file field `logo`: JPG, PNG, or WebP,
+maximum 2 MB and 4096 × 4096 pixels. Uploading a replacement removes the old file.
+Images use the public storage disk; run `php artisan storage:link` to expose them.
+Set `APP_URL` to the backend's public URL so returned logo URLs resolve correctly.
+
+`GET /api/catalog/options` includes the full active `dsps` list. Existing
+`music_stores` and `video_stores` remain arrays of codes, now read from the database.
+The frontend can filter `dsps` by `supported_types` to display logos and names.
+Send selected codes in `metadata.stores`. Active status and catalog-type support
+are checked on saving metadata and submitting, including drafts saved before an
+admin change. Deactivate with `{"is_active":false}`; there is no hard delete.
+Existing submissions and delivery records retain their codes. New snapshots freeze
+DSP names in `master_data`; logo URLs represent the current uploaded image.
+
+Apply `php artisan migrate`, then `php artisan db:seed --class=CatalogDspSeeder`
+(or `CatalogMasterDataSeeder`). The initial destinations preserve the previous
+configuration; admins should maintain availability according to the distribution
+team's supported destinations.

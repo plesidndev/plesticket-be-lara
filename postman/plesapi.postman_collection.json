@@ -1251,6 +1251,19 @@
       "description": "Active PlesConnect account; organizer access is not required. See docs/catalog-api.md. Set catalog_asset_id from the upload response and catalog_version from the submission response.",
       "item": [
         {
+          "name": "DSP dropdown with logos",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/catalog/dsps"
+          }
+        },
+        {
           "name": "Timezone dropdown",
           "request": {
             "method": "GET",
@@ -2198,6 +2211,121 @@
                   "language": "json"
                 }
               }
+            }
+          }
+        },
+        {
+          "name": "List DSPs (including inactive)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/dsps"
+          }
+        },
+        {
+          "name": "Create DSP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/dsps",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"new_dsp\",\n  \"name\": \"New DSP\",\n  \"supported_types\": [\n    \"music\",\n    \"music_video\"\n  ],\n  \"is_active\": true,\n  \"sort_order\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Update DSP",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/dsps/new_dsp",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New DSP\",\n  \"supported_types\": [\n    \"music\"\n  ],\n  \"is_active\": true,\n  \"sort_order\": 10\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Deactivate DSP",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/dsps/new_dsp",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"is_active\": false\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          }
+        },
+        {
+          "name": "Upload or replace DSP logo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": "{{base_url}}/admin/catalog/dsps/new_dsp/logo",
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "logo",
+                  "type": "file",
+                  "src": [],
+                  "description": "JPG, PNG, or WebP; max 2 MB, 4096 x 4096 pixels"
+                }
+              ]
             }
           }
         }

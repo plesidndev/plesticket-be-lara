@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Catalog\SaveCatalogMasterDataRequest;
+use App\Http\Requests\Catalog\UploadCatalogDspLogoRequest;
 use App\Http\Resources\CatalogMasterDataResource;
 use App\Services\Catalog\CatalogMasterDataService;
 use App\Traits\ApiResponse;
@@ -14,6 +15,11 @@ class CatalogMasterDataController extends Controller
     use ApiResponse;
 
     public function __construct(private readonly CatalogMasterDataService $masters) {}
+
+    public function uploadDspLogo(UploadCatalogDspLogoRequest $request, string $code): JsonResponse
+    {
+        return $this->success('DSP logo updated.', new CatalogMasterDataResource($this->masters->uploadDspLogo($code, $request->file('logo'))));
+    }
 
     public function index(string $masterType): JsonResponse
     {

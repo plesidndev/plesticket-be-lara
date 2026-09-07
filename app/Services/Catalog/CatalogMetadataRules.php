@@ -29,7 +29,7 @@ class CatalogMetadataRules
             'metadata.territories' => [$required, 'array', 'min:1', 'max:250'],
             'metadata.territories.*' => ['required', 'string', 'distinct', 'regex:/\A(?:WORLD|[A-Z]{2})\z/'],
             'metadata.stores' => [$required, 'array', 'min:1', 'max:100'],
-            'metadata.stores.*' => ['required', 'string', 'distinct', Rule::in(config('catalog.'.($type === 'music' ? 'music_stores' : 'video_stores')))],
+            'metadata.stores.*' => ['required', 'string', 'distinct', Rule::in(app(CatalogMasterDataService::class)->destinationCodes($type))],
             'metadata.preorder' => ['sometimes', 'boolean'],
             'metadata.preorder_date' => ['required_if:metadata.preorder,true', 'nullable', 'date_format:Y-m-d', 'before:metadata.release_date'],
             'metadata.no_preorder_preview' => ['sometimes', 'boolean'],

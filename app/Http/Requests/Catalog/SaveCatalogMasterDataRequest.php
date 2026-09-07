@@ -26,6 +26,8 @@ class SaveCatalogMasterDataRequest extends FormRequest
             'code' => [$updating ? 'prohibited' : 'required', 'string', 'max:40', $codeRule],
             'name' => [$updating ? 'sometimes' : 'required', 'string', 'max:100'],
             'is_active' => ['sometimes', 'boolean'],
+            'supported_types' => [$this->route('masterType') === 'dsps' ? ($updating ? 'sometimes' : 'required') : 'prohibited', 'array', 'min:1', 'max:2'],
+            'supported_types.*' => ['required', 'string', 'distinct', Rule::in(['music', 'music_video'])],
             'sort_order' => ['sometimes', 'integer', 'between:0,100000'],
         ];
     }

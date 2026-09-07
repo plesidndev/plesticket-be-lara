@@ -204,7 +204,7 @@ Route::middleware(['auth:organizer', 'role:MITRA_TICKET_BOX'])->prefix('agent')-
 // Catalog identity is independent of event organizer capabilities.
 Route::middleware(['auth:api', EnsureCatalogAccess::class])->prefix('catalog')->group(function () {
     Route::get('/options', [CatalogController::class, 'options']);
-    Route::get('/{masterType}', [CatalogMasterDataController::class, 'index'])->where('masterType', 'genres|languages|territories|timezones');
+    Route::get('/{masterType}', [CatalogMasterDataController::class, 'index'])->where('masterType', 'genres|languages|territories|timezones|dsps');
     Route::get('/releases', [CatalogController::class, 'index']);
     Route::post('/releases', [CatalogController::class, 'store'])->middleware('throttle:catalog-create');
     Route::prefix('releases/{release}')->whereUuid('release')->group(function () {
@@ -236,7 +236,8 @@ Route::middleware(['auth:api', 'role:SUPER_ADMIN', EnsureCatalogAccess::class.':
 });
 
 Route::middleware(['auth:api', 'role:SUPER_ADMIN', EnsureCatalogAccess::class.':admin'])->prefix('admin/catalog')->group(function () {
-    Route::get('/{masterType}', [CatalogMasterDataController::class, 'adminIndex'])->where('masterType', 'genres|languages|territories|timezones');
-    Route::post('/{masterType}', [CatalogMasterDataController::class, 'store'])->where('masterType', 'genres|languages|territories|timezones');
-    Route::patch('/{masterType}/{code}', [CatalogMasterDataController::class, 'update'])->where('masterType', 'genres|languages|territories|timezones')->where('code', '.+');
+    Route::get('/{masterType}', [CatalogMasterDataController::class, 'adminIndex'])->where('masterType', 'genres|languages|territories|timezones|dsps');
+    Route::post('/dsps/{code}/logo', [CatalogMasterDataController::class, 'uploadDspLogo'])->where('code', '[a-z0-9_-]+');
+    Route::post('/{masterType}', [CatalogMasterDataController::class, 'store'])->where('masterType', 'genres|languages|territories|timezones|dsps');
+    Route::patch('/{masterType}/{code}', [CatalogMasterDataController::class, 'update'])->where('masterType', 'genres|languages|territories|timezones|dsps')->where('code', '.+');
 });

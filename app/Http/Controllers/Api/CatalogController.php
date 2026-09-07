@@ -28,7 +28,8 @@ class CatalogController extends Controller
         return $this->success('Catalog options retrieved.', [
             'types' => ['music', 'music_video'], 'release_types' => ['single', 'ep', 'album'],
             'statuses' => array_column(CatalogStatus::cases(), 'value'),
-            'music_stores' => config('catalog.music_stores'), 'video_stores' => config('catalog.video_stores'),
+            'music_stores' => $masters->destinationCodes('music'), 'video_stores' => $masters->destinationCodes('music_video'),
+            'dsps' => CatalogMasterDataResource::collection($masters->list('dsps')),
             'genres' => CatalogMasterDataResource::collection($masters->list('genres')),
             'languages' => CatalogMasterDataResource::collection($masters->list('languages')),
             'territories' => CatalogMasterDataResource::collection($masters->list('territories')),

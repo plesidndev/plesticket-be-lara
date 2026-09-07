@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Models\CatalogDsp;
 use App\Models\User;
+use Database\Seeders\CatalogDspSeeder;
 use Database\Seeders\CatalogMasterDataSeeder;
 use Database\Seeders\CatalogTerritorySeeder;
 use Database\Seeders\CatalogTimezoneSeeder;
@@ -325,6 +327,77 @@ class CatalogApiTest extends TestCase
         $this->seed(CatalogMasterDataSeeder::class);
         $this->assertDatabaseHas('catalog_genres', ['code' => 'pop', 'name' => 'Popular Music', 'is_active' => false]);
         $this->assertDatabaseCount('catalog_genres', 23);
+    }
+
+    public function test_admin_can_add_dsps_and_options_immediately_use_database_destinations(): void
+    {
+        $payload = ['code' => 'new_dsp', 'name' => 'New DSP', 'supported_types' => ['music', 'music_video']];
+        $this->actingAs($this->artist, 'api')->postJson('/api/admin/catalog/dsps', $payload)->assertForbidden();
+        $this->getJson('/api/admin/catalog/dsps')->assertForbidden();
+        $this->actingAs($this->admin, 'api')->postJson('/api/admin/catalog/dsps', $payload)->assertCreated()->assertJsonPath('data.supported_types', ['music', 'music_video']);
+        $this->postJson('/api/admin/catalog/dsps', $payload)->assertUnprocessable();
+        $this->patchJson('/api/admin/catalog/dsps/new_dsp', ['code' => 'changed'])->assertUnprocessable();
+        foreach ([[], ['podcast'], ['music', 'music']] as $types) {
+            $this->patchJson('/api/admin/catalog/dsps/new_dsp', ['supported_types' => $types])->assertUnprocessable();
+        }
+        $this->actingAs($this->artist, 'api')->getJson('/api/catalog/dsps')->assertOk()->assertJsonCount(11, 'data')->assertJsonFragment(['code' => 'new_dsp']);
+        $options = $this->getJson('/api/catalog/options')->assertOk()->json('data');
+        $this->assertContains('new_dsp', $options['music_stores']);
+        $this->assertContains('new_dsp', $options['video_stores']);
+        $this->draft(['stores' => ['new_dsp']]);
+        $this->draft(['stores' => ['new_dsp']], 'music_video');
+        foreach (['unknown', 'Spotify', 'apple_music_video'] as $code) {
+            $this->postJson('/api/catalog/releases', ['type' => 'music', 'title' => 'Invalid DSP', 'metadata' => ['stores' => [$code]]])->assertUnprocessable()->assertJsonValidationErrors(['metadata.stores.0']);
+        }
+    }
+
+    public function test_inactive_dsps_are_hidden_and_rejected_and_reseed_preserves_admin_changes(): void
+    {
+        $id = $this->completeDraft()['id'];
+        $this->actingAs($this->admin, 'api')->patchJson('/api/admin/catalog/dsps/spotify', ['name' => 'Spotify custom', 'is_active' => false])->assertOk();
+        $this->seed(CatalogDspSeeder::class);
+        $this->assertDatabaseCount('catalog_dsps', 10);
+        $this->assertDatabaseHas('catalog_dsps', ['code' => 'spotify', 'name' => 'Spotify custom', 'is_active' => false]);
+        $this->getJson('/api/admin/catalog/dsps')->assertOk()->assertJsonFragment(['code' => 'spotify']);
+        $this->actingAs($this->artist, 'api')->getJson('/api/catalog/dsps')->assertOk()->assertJsonMissing(['code' => 'spotify']);
+        $this->assertNotContains('spotify', $this->getJson('/api/catalog/options')->json('data.music_stores'));
+        $this->patchJson("/api/catalog/releases/$id", ['metadata' => ['stores' => ['spotify']]])->assertUnprocessable();
+        $this->postJson("/api/catalog/releases/$id/submit")->assertUnprocessable()->assertJsonValidationErrors(['metadata.stores.0']);
+    }
+
+    public function test_dsp_supported_type_changes_are_rechecked_at_submission(): void
+    {
+        $id = $this->completeDraft()['id'];
+        $this->actingAs($this->admin, 'api')->patchJson('/api/admin/catalog/dsps/spotify', ['supported_types' => ['music_video']])->assertOk();
+        $this->actingAs($this->artist, 'api')->postJson("/api/catalog/releases/$id/submit")->assertUnprocessable()->assertJsonValidationErrors(['metadata.stores.0']);
+        $this->assertDatabaseCount('catalog_submissions', 0);
+    }
+
+    public function test_submitted_dsp_labels_survive_admin_renames(): void
+    {
+        $id = $this->completeDraft()['id'];
+        $this->postJson("/api/catalog/releases/$id/submit")->assertOk();
+        $this->actingAs($this->admin, 'api')->patchJson('/api/admin/catalog/dsps/spotify', ['name' => 'Spotify renamed', 'is_active' => false])->assertOk();
+        $this->actingAs($this->artist, 'api')->getJson("/api/catalog/releases/$id/submissions/1")->assertOk()
+            ->assertJsonFragment(['field' => 'metadata.stores.0', 'code' => 'spotify', 'name' => 'Spotify']);
+    }
+
+    public function test_dsp_logos_can_be_uploaded_and_replaced_only_by_admins(): void
+    {
+        Storage::fake('public');
+        $this->actingAs($this->artist, 'api')->postJson('/api/admin/catalog/dsps/spotify/logo', ['logo' => UploadedFile::fake()->image('logo.png')])->assertForbidden();
+        $this->actingAs($this->admin, 'api')->postJson('/api/admin/catalog/dsps/spotify/logo', ['logo' => UploadedFile::fake()->create('logo.txt', 1, 'text/plain')])->assertUnprocessable();
+        $this->postJson('/api/admin/catalog/dsps/spotify/logo', ['logo' => UploadedFile::fake()->image('logo.png')->size(2049)])->assertUnprocessable();
+        $this->postJson('/api/admin/catalog/dsps/missing/logo', ['logo' => UploadedFile::fake()->image('logo.png')])->assertNotFound();
+        $result = $this->postJson('/api/admin/catalog/dsps/spotify/logo', ['logo' => UploadedFile::fake()->image('logo.png')])->assertOk();
+        $old = CatalogDsp::findOrFail('spotify')->logo_path;
+        Storage::disk('public')->assertExists($old);
+        $this->assertSame(Storage::disk('public')->url($old), $result->json('data.logo_url'));
+        $this->postJson('/api/admin/catalog/dsps/spotify/logo', ['logo' => UploadedFile::fake()->image('replacement.png')])->assertOk();
+        Storage::disk('public')->assertMissing($old);
+        $new = CatalogDsp::findOrFail('spotify')->logo_path;
+        Storage::disk('public')->assertExists($new);
+        $this->actingAs($this->artist, 'api')->getJson('/api/catalog/dsps')->assertOk()->assertJsonFragment(['logo_url' => Storage::disk('public')->url($new)]);
     }
 
     private function metadata(): array

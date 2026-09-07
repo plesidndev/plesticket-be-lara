@@ -12,6 +12,7 @@ class CatalogMasterDataSeeder extends Seeder
     {
         $this->call(CatalogTerritorySeeder::class);
         $this->call(CatalogTimezoneSeeder::class);
+        $this->call(CatalogDspSeeder::class);
         // Starter vocabulary for PlesConnect, not a claimed copy of a partner's taxonomy.
         $genres = [
             'pop' => 'Pop', 'rock' => 'Rock', 'alternative' => 'Alternative', 'indie' => 'Indie',
