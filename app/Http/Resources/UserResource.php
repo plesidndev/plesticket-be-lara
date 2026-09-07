@@ -10,19 +10,21 @@ class UserResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id'            => $this->id,
-            'uid'           => $this->uid,
-            'name'          => $this->name,
-            'username'      => $this->username,
-            'email'         => $this->email,
-            'phone'         => $this->phone,
+            'id' => $this->id,
+            'uid' => $this->uid,
+            'name' => $this->name,
+            'username' => $this->username,
+            'email' => $this->email,
+            'phone' => $this->phone,
             'date_of_birth' => $this->date_of_birth?->format('Y-m-d'),
-            'photo'         => $this->photo ? asset('storage/' . $this->photo) : null,
-            'role'          => $this->role->value,
-            'role_label'    => $this->role->label(),
-            'is_organizer'  => (bool) $this->is_organizer,
-            'is_active'     => $this->is_active,
-            'created_at'    => $this->created_at,
+            'photo' => $this->photo ? asset('storage/'.$this->photo) : null,
+            'role' => $this->role->value,
+            'role_label' => $this->role->label(),
+            'has_completed_profile' => $this->profile_completed_at !== null,
+            'is_plesconnect_user' => (bool) $this->is_plesconnect_user,
+            'is_organizer' => (bool) $this->is_organizer,
+            'is_active' => $this->is_active,
+            'created_at' => $this->created_at,
         ];
     }
 }

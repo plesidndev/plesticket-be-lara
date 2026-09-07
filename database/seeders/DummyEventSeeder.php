@@ -28,6 +28,7 @@ class DummyEventSeeder extends Seeder
                     'phone' => '081234567890',
                     'password' => 'password123',
                     'role' => UserRole::RegisteredUser,
+                    'is_plesconnect_user' => true,
                     'is_organizer' => true,
                     'is_active' => true,
                 ],
@@ -185,7 +186,7 @@ class DummyEventSeeder extends Seeder
                         array_merge($ticketType, [
                             'is_active' => true,
                             'sale_start' => '2026-08-01 00:00:00',
-                            'sale_end' => $eventData['start_date'] . ' 23:59:59',
+                            'sale_end' => $eventData['start_date'].' 23:59:59',
                         ]),
                     );
                 }

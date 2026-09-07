@@ -29,14 +29,22 @@ return [
     ],
 
     'xendit' => [
-        'secret_key'     => env('XENDIT_SECRET_KEY'),
+        'secret_key' => env('XENDIT_SECRET_KEY'),
         'callback_token' => env('XENDIT_CALLBACK_TOKEN'),
-        'base_url'       => env('XENDIT_BASE_URL', 'https://api.xendit.co'),
+        'base_url' => env('XENDIT_BASE_URL', 'https://api.xendit.co'),
         // Xendit rejects requests without this. The value is account- and
         // endpoint-dependent; override per environment if Xendit asks for a
         // different one.
-        'api_version'    => env('XENDIT_API_VERSION', '2024-11-11'),
-        'timeout'        => env('XENDIT_TIMEOUT', 30),
+        'api_version' => env('XENDIT_API_VERSION', '2024-11-11'),
+        'timeout' => env('XENDIT_TIMEOUT', 30),
+    ],
+
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect' => env('GOOGLE_REDIRECT_URI'),
+        'frontend_callback' => env('GOOGLE_FRONTEND_CALLBACK_URL', 'http://localhost:3000/auth/google/callback'),
+        'handoff_ttl_seconds' => (int) env('GOOGLE_HANDOFF_TTL_SECONDS', 120),
     ],
 
     'slack' => [

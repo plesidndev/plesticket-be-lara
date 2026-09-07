@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Event;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 use Tymon\JWTAuth\Facades\JWTAuth;
 
@@ -18,11 +19,11 @@ class OrganizerAccountTest extends TestCase
         $n++;
 
         return User::create(array_merge([
-            'uid'      => sprintf('USR%04d', $n),
-            'name'     => "User {$n}",
-            'email'    => "user{$n}@example.com",
+            'uid' => sprintf('USR%04d', $n),
+            'name' => "User {$n}",
+            'email' => "user{$n}@example.com",
             'password' => 'secret',
-            'role'     => 'REGISTERED_USER',
+            'role' => 'REGISTERED_USER',
         ], $attrs));
     }
 
@@ -64,6 +65,7 @@ class OrganizerAccountTest extends TestCase
             ->assertJsonPath('data.user.is_organizer', true);
 
         $this->assertTrue($user->fresh()->is_organizer);
+        $this->assertTrue($user->fresh()->is_plesconnect_user);
 
         $this->withHeaders(['Authorization' => 'Bearer '.$activation->json('data.token')])
             ->getJson('/api/events/my')
@@ -76,8 +78,8 @@ class OrganizerAccountTest extends TestCase
      */
     public function test_activation_returns_a_token_that_actually_works(): void
     {
-        $user      = $this->user();
-        $oldToken  = JWTAuth::fromUser($user);
+        $user = $this->user();
+        $oldToken = JWTAuth::fromUser($user);
 
         $this->assertFalse(JWTAuth::setToken($oldToken)->getPayload()->get('is_organizer'));
 
@@ -138,22 +140,22 @@ class OrganizerAccountTest extends TestCase
         $owner->forceFill(['is_organizer' => false])->save();
 
         Event::create([
-            'event_id'            => 'EVT0001',
-            'user_id'             => $owner->id,
-            'title'               => 'Legacy Event',
-            'slug'                => 'legacy-event',
-            'pic_name'            => 'Panitia',
-            'pic_identity_type'   => 'ktp',
+            'event_id' => 'EVT0001',
+            'user_id' => $owner->id,
+            'title' => 'Legacy Event',
+            'slug' => 'legacy-event',
+            'pic_name' => 'Panitia',
+            'pic_identity_type' => 'ktp',
             'pic_identity_number' => '3200000000000001',
-            'start_date'          => now()->addWeek()->toDateString(),
-            'end_date'            => now()->addWeek()->toDateString(),
+            'start_date' => now()->addWeek()->toDateString(),
+            'end_date' => now()->addWeek()->toDateString(),
             'verification_status' => 'verified',
         ]);
 
         // Re-run the backfill exactly as the migration does.
-        $owners = \Illuminate\Support\Facades\DB::table('events')
+        $owners = DB::table('events')
             ->distinct()->pluck('user_id')->filter()->all();
-        \Illuminate\Support\Facades\DB::table('users')
+        DB::table('users')
             ->whereIn('id', $owners)->update(['is_organizer' => true]);
 
         $this->assertTrue($owner->fresh()->is_organizer);

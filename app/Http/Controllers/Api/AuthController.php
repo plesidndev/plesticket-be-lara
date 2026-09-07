@@ -2,8 +2,8 @@
 
 namespace App\Http\Controllers\Api;
 
-use App\Http\Controllers\Controller;
 use App\Enums\UserRole;
+use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Http\Requests\Auth\RegisterRequest;
 use App\Http\Resources\UserResource;
@@ -24,7 +24,7 @@ class AuthController extends Controller
 
         return $this->created('Registration successful.', [
             'token' => $result['token'],
-            'user'  => new UserResource($result['user']),
+            'user' => new UserResource($result['user']),
         ]);
     }
 
@@ -38,7 +38,7 @@ class AuthController extends Controller
 
         return $this->success('Login successful.', [
             'token' => $result['token'],
-            'user'  => new UserResource($result['user']),
+            'user' => new UserResource($result['user']),
         ]);
     }
 

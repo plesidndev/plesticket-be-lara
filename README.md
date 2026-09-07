@@ -75,7 +75,7 @@ Demo credentials:
 
 | Account | Login | Password | Endpoint |
 |---------|-------|----------|----------|
-| EO owner | `organizer.demo@plesticket.com` | `password123` | `POST /api/auth/login` |
+| PlesConnect user / EO owner | `organizer.demo@plesticket.com` | OTP | `POST /api/plesconnect-auth/otp/request` |
 | EO staff (Jakarta Music Fest) | `EVT9001-STF-0001` | `password123` | `POST /api/organizer-auth/login` |
 | Buyer | `buyer.demo@plesticket.com` | `password123` | `POST /api/auth/login` |
 | Super admin | `superadmin@plesticket.com` | `adminpass` | `POST /api/auth/login` |
@@ -96,11 +96,30 @@ The EO owner is already activated as an organizer. The EO staff account is scope
 
 | Method | Endpoint | Auth | Description |
 |--------|----------|------|-------------|
-| POST | `/api/auth/register` | — | Register as `REGISTERED_USER` |
-| POST | `/api/auth/buyer-register` | — | Register as `BUYER` |
-| POST | `/api/auth/login` | — | Login, returns JWT |
+| POST | `/api/auth/register` | — | Register a buyer account with a password |
+| POST | `/api/auth/login` | — | Buyer/admin password login, returns JWT |
 | GET | `/api/auth/me` | JWT | Get current user |
 | POST | `/api/auth/logout` | JWT | Invalidate token |
+
+### PlesConnect Auth (`/api/plesconnect-auth`)
+
+Successful OTP or Google verification creates or marks a PlesConnect account.
+Authentication does not automatically grant organizer status; organizer
+activation and future artist onboarding are separate capabilities.
+
+For local development, set `AUTH_OTP_LOCAL_CODE=131313` with `APP_ENV=local`
+to generate a fixed OTP. Request a code first, then verify using `131313`.
+Expiration, attempt limits, and single-use checks still apply. Leave the setting
+empty to generate random codes; it is ignored outside the local environment.
+After changing the setting, run `php artisan config:clear`.
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| POST | `/api/plesconnect-auth/otp/request` | — | Email a six-digit PlesConnect registration/login code |
+| POST | `/api/plesconnect-auth/otp/verify` | — | Verify the code, create/join PlesConnect, and return a JWT |
+| GET | `/api/plesconnect-auth/google/redirect` | — | Generate a PlesConnect Google authorization URL |
+| GET | `/api/plesconnect-auth/google/callback` | — | Register/login and redirect to PlesConnect with a one-time code |
+| POST | `/api/plesconnect-auth/google/exchange` | — | Exchange the one-time Google code for a JWT |
 
 ### Organizer Auth (`/api/organizer-auth`)
 

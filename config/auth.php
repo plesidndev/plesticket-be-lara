@@ -1,8 +1,15 @@
 <?php
 
+use App\Models\OrganizerMember;
 use App\Models\User;
 
 return [
+
+    'otp' => [
+        'local_code' => env('AUTH_OTP_LOCAL_CODE'),
+        'expire_minutes' => (int) env('AUTH_OTP_EXPIRE_MINUTES', 10),
+        'max_attempts' => (int) env('AUTH_OTP_MAX_ATTEMPTS', 5),
+    ],
 
     /*
     |--------------------------------------------------------------------------
@@ -39,15 +46,15 @@ return [
 
     'guards' => [
         'web' => [
-            'driver'   => 'session',
+            'driver' => 'session',
             'provider' => 'users',
         ],
         'api' => [
-            'driver'   => 'jwt',
+            'driver' => 'jwt',
             'provider' => 'users',
         ],
         'organizer' => [
-            'driver'   => 'jwt',
+            'driver' => 'jwt',
             'provider' => 'organizer_members',
         ],
     ],
@@ -72,11 +79,11 @@ return [
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
-            'model'  => env('AUTH_MODEL', User::class),
+            'model' => env('AUTH_MODEL', User::class),
         ],
         'organizer_members' => [
             'driver' => 'eloquent',
-            'model'  => \App\Models\OrganizerMember::class,
+            'model' => OrganizerMember::class,
         ],
 
         // 'users' => [

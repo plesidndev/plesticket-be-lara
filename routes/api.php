@@ -17,6 +17,7 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\OrganizerAuthController;
 use App\Http\Controllers\Api\OrganizerMemberController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\PlesConnectAuthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ProvinceController;
 use App\Http\Controllers\Api\TalentController;
@@ -38,8 +39,19 @@ Route::prefix('auth')->group(function () {
     });
 });
 
+// Passwordless identity for PlesConnect. Organizer/artist capabilities are
+// granted separately from authentication and can coexist on one account.
+Route::prefix('plesconnect-auth')->group(function () {
+    Route::post('/otp/request', [PlesConnectAuthController::class, 'requestOtp'])->middleware('throttle:5,1');
+    Route::post('/otp/verify', [PlesConnectAuthController::class, 'verifyOtp'])->middleware('throttle:10,1');
+    Route::get('/google/redirect', [PlesConnectAuthController::class, 'googleRedirect'])->middleware('throttle:20,1');
+    Route::get('/google/callback', [PlesConnectAuthController::class, 'googleCallback'])->middleware('throttle:20,1');
+    Route::post('/google/exchange', [PlesConnectAuthController::class, 'googleExchange'])->middleware('throttle:10,1');
+});
+
 // Authenticated user profile
 Route::middleware('auth:api')->prefix('profile')->group(function () {
+    Route::post('/', [ProfileController::class, 'update']);
     Route::post('/photo', [ProfileController::class, 'uploadPhoto']);
 });
 

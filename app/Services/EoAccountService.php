@@ -27,7 +27,8 @@ class EoAccountService
     {
         $alreadyActive = (bool) $user->is_organizer;
 
-        if (! $alreadyActive) {
+        if (! $alreadyActive || ! $user->is_plesconnect_user) {
+            $user->is_plesconnect_user = true;
             $user->is_organizer = true;
             $user->save();
         }
@@ -39,8 +40,8 @@ class EoAccountService
         $token = JWTAuth::fromUser($user->fresh());
 
         return [
-            'token'          => $token,
-            'user'           => $user->fresh(),
+            'token' => $token,
+            'user' => $user->fresh(),
             'already_active' => $alreadyActive,
         ];
     }
