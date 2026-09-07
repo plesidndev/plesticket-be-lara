@@ -5,6 +5,7 @@ namespace App\Http\Requests\Talent;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 
 class CreateTalentRequest extends FormRequest
 {
@@ -16,7 +17,7 @@ class CreateTalentRequest extends FormRequest
             'name'          => ['required', 'string', 'max:150'],
             'slug'          => ['nullable', 'string', 'max:180'],
             'type'          => ['required', 'in:personal,group'],
-            'category'      => ['required', 'in:music,band,dj,comedian,speaker,mc,dancer,other'],
+            'category'      => ['required', 'string', Rule::exists('talent_categories', 'code')->where('is_active', true)],
             'genre'         => ['nullable', 'string', 'max:100'],
             'bio'           => ['nullable', 'string', 'max:2000'],
             'origin_city'   => ['nullable', 'string', 'max:100'],

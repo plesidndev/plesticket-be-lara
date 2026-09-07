@@ -16,6 +16,7 @@ use App\Http\Controllers\Api\EoAccountController;
 use App\Http\Controllers\Api\EoAgentController;
 use App\Http\Controllers\Api\EventController;
 use App\Http\Controllers\Api\EventTalentController;
+use App\Http\Controllers\Api\MeSummaryController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\OrganizerAuthController;
 use App\Http\Controllers\Api\OrganizerMemberController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\PlesConnectAuthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ProvinceController;
+use App\Http\Controllers\Api\TalentCategoryController;
 use App\Http\Controllers\Api\TalentController;
 use App\Http\Controllers\Api\TicketController;
 use App\Http\Controllers\Api\UserController;
@@ -52,6 +54,9 @@ Route::prefix('plesconnect-auth')->group(function () {
     Route::get('/google/callback', [PlesConnectAuthController::class, 'googleCallback'])->middleware('throttle:20,1');
     Route::post('/google/exchange', [PlesConnectAuthController::class, 'googleExchange'])->middleware('throttle:10,1');
 });
+
+// Signed-in creator workspace counts
+Route::middleware('auth:api')->get('/me/summary', MeSummaryController::class);
 
 // Authenticated user profile
 Route::middleware('auth:api')->prefix('profile')->group(function () {
@@ -155,6 +160,9 @@ Route::middleware('auth:api')->prefix('orders')->group(function () {
 // Payment gateway callbacks — no auth: verified by provider callback token.
 Route::post('/webhooks/xendit', XenditWebhookController::class);
 
+// Talent categories — public master data backing the talent category field
+Route::get('/talent-categories', [TalentCategoryController::class, 'index']);
+
 // Talents — public directory
 Route::get('/talents', [TalentController::class, 'index']);
 
@@ -177,6 +185,9 @@ Route::middleware(['auth:api', 'eo'])->group(function () {
 Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('admin')->group(function () {
     Route::get('/talents', [TalentController::class, 'adminIndex']);
     Route::post('/talents/{id}/verify', [TalentController::class, 'verify']);
+    Route::get('/talent-categories', [TalentCategoryController::class, 'adminIndex']);
+    Route::post('/talent-categories', [TalentCategoryController::class, 'store']);
+    Route::patch('/talent-categories/{code}', [TalentCategoryController::class, 'update'])->where('code', '[a-z0-9_-]+');
 });
 
 // Event lineup (talents per event) — authenticated EO manages, public can read

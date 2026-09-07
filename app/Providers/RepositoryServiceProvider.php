@@ -17,6 +17,7 @@ use App\Repositories\Contracts\OrderRepositoryInterface;
 use App\Repositories\Contracts\OrganizerMemberRepositoryInterface;
 use App\Repositories\Contracts\PaymentRepositoryInterface;
 use App\Repositories\Contracts\ProvinceRepositoryInterface;
+use App\Repositories\Contracts\TalentCategoryRepositoryInterface;
 use App\Repositories\Contracts\TalentRepositoryInterface;
 use App\Repositories\Contracts\TicketRepositoryInterface;
 use App\Repositories\Contracts\TicketTypeRepositoryInterface;
@@ -27,6 +28,7 @@ use App\Repositories\OrderRepository;
 use App\Repositories\OrganizerMemberRepository;
 use App\Repositories\PaymentRepository;
 use App\Repositories\ProvinceRepository;
+use App\Repositories\TalentCategoryRepository;
 use App\Repositories\TalentRepository;
 use App\Repositories\TicketRepository;
 use App\Repositories\TicketTypeRepository;
@@ -40,6 +42,7 @@ class RepositoryServiceProvider extends ServiceProvider
     public function register(): void
     {
         $this->app->bind(CatalogMasterDataRepositoryInterface::class, CatalogMasterDataRepository::class);
+        $this->app->bind(TalentCategoryRepositoryInterface::class, TalentCategoryRepository::class);
         $this->app->bind(CatalogRepositoryInterface::class, CatalogRepository::class);
         $this->app->bind(UserRepositoryInterface::class, UserRepository::class);
         $this->app->bind(ProvinceRepositoryInterface::class, ProvinceRepository::class);

@@ -2,11 +2,13 @@
 
 namespace Tests\Feature;
 
+use App\Enums\CatalogStatus;
 use App\Enums\OrderStatus;
 use App\Enums\PaymentProvider;
 use App\Enums\PaymentStatus;
 use App\Enums\PaymentType;
 use App\Enums\WebhookDeliveryStatus;
+use App\Models\CatalogRelease;
 use App\Models\Category;
 use App\Models\Event;
 use App\Models\Order;
@@ -69,7 +71,28 @@ class AdminConsoleApiTest extends TestCase
         $this->actingAs($this->admin, 'api')->getJson('/api/admin/summary')->assertOk()->assertJsonPath('data', [
             'pending_events' => 1, 'verified_events' => 0, 'active_users' => 2, 'active_categories' => 1,
             'pending_talents' => 1, 'refunds_requiring_attention' => 0, 'webhooks_requiring_attention' => 0,
+            'music_awaiting_review' => 0, 'music_video_awaiting_review' => 0,
         ]);
+    }
+
+    public function test_admin_summary_counts_only_the_unclaimed_catalog_queue_per_type(): void
+    {
+        $releases = [
+            ['music', CatalogStatus::WaitingForReview], ['music', CatalogStatus::WaitingForReview],
+            ['music_video', CatalogStatus::WaitingForReview],
+            ['music', CatalogStatus::UnderReview], ['music', CatalogStatus::Draft], ['music_video', CatalogStatus::Live],
+        ];
+        foreach ($releases as $index => [$type, $status]) {
+            CatalogRelease::create([
+                'user_id' => $this->user->id, 'type' => $type, 'title' => 'Release '.$index,
+                'metadata' => [], 'status' => $status,
+            ]);
+        }
+
+        $this->actingAs($this->admin, 'api')->getJson('/api/admin/summary')
+            ->assertOk()
+            ->assertJsonPath('data.music_awaiting_review', 2)
+            ->assertJsonPath('data.music_video_awaiting_review', 1);
     }
 
     public function test_admin_operations_endpoints_return_only_items_requiring_attention(): void

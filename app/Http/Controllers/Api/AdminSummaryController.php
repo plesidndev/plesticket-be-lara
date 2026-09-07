@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Enums\CatalogStatus;
+use App\Models\CatalogRelease;
 use App\Models\Category;
 use App\Models\Event;
 use App\Models\Payment;
@@ -26,6 +28,11 @@ class AdminSummaryController extends Controller
             'pending_talents' => Talent::where('is_verified', false)->count(),
             'refunds_requiring_attention' => Payment::where('requires_refund', true)->count(),
             'webhooks_requiring_attention' => WebhookDelivery::whereIn('status', ['unmatched', 'failed'])->count(),
+            // The unclaimed catalog queue, split by type because the admin catalog
+            // screens are type-scoped. Releases already under review belong to the
+            // admin who picked them up, so they are not counted here.
+            'music_awaiting_review' => CatalogRelease::where('status', CatalogStatus::WaitingForReview)->where('type', 'music')->count(),
+            'music_video_awaiting_review' => CatalogRelease::where('status', CatalogStatus::WaitingForReview)->where('type', 'music_video')->count(),
         ]);
     }
 }
