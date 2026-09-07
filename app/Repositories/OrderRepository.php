@@ -102,7 +102,11 @@ class OrderRepository implements OrderRepositoryInterface
                 $join->on('orders.agent_id', '=', 'organizer_members.id')
                     ->where('orders.status', '=', 'paid');
             })
-            ->leftJoin('order_items', 'order_items.order_id', '=', 'orders.id')
+            ->leftJoinSub(
+                DB::table('order_items')->selectRaw('order_id, SUM(quantity) as quantity')->groupBy('order_id'),
+                'order_items',
+                fn ($join) => $join->on('order_items.order_id', '=', 'orders.id'),
+            )
             ->select(
                 'organizer_members.id',
                 'organizer_members.uid',

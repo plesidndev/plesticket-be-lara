@@ -64,19 +64,19 @@ class EoAgentController extends Controller
             return $this->error('Agent not found.', 404);
         }
 
-        $data = $this->orders->agentSummary($agent->id, null, null);
+        $data = $this->orders->agentSummary($agent->id, (float) $agent->commission_rate, null, null);
 
         return $this->success('Agent summary retrieved.', [
-            'agent'              => [
-                'id'              => $agent->id,
-                'uid'             => $agent->uid,
-                'name'            => $agent->name,
+            'agent' => [
+                'id' => $agent->id,
+                'uid' => $agent->uid,
+                'name' => $agent->name,
                 'commission_rate' => (float) $agent->commission_rate,
             ],
-            'total_orders'       => $data['total_orders'],
+            'total_orders' => $data['total_orders'],
             'total_tickets_sold' => $data['total_tickets_sold'],
-            'total_revenue'      => $data['total_revenue'],
-            'commission_owed'    => round($data['total_revenue'] * (float) $agent->commission_rate / 100, 2),
+            'total_revenue' => $data['total_revenue'],
+            'commission_owed' => round($data['total_revenue'] * (float) $agent->commission_rate / 100, 2),
         ]);
     }
 
