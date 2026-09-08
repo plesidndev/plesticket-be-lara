@@ -85,7 +85,7 @@ Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/payment-methods', [PaymentController::class, 'methods']);
 
 // Categories — Super Admin CRUD
-Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('admin')->group(function () {
+Route::middleware(['auth:api', 'role:SUPER_ADMIN,ADMIN'])->prefix('admin')->group(function () {
     Route::get('/summary', AdminSummaryController::class);
     Route::get('/operations/refunds', [AdminOperationsController::class, 'refunds']);
     Route::get('/operations/webhooks', [AdminOperationsController::class, 'webhooks']);
@@ -95,11 +95,17 @@ Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('admin')->group(func
     Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
 });
 
-// User management — Super Admin only
-Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('users')->group(function () {
+// Reading the directory is open to both staff roles, but an ADMIN only ever sees members:
+// the controller pins its role filter to REGISTERED_USER and refuses to show a staff account.
+Route::middleware(['auth:api', 'role:SUPER_ADMIN,ADMIN'])->prefix('users')->group(function () {
     Route::get('/', [UserController::class, 'index']);
-    Route::post('/', [UserController::class, 'store']);
     Route::get('/{uid}', [UserController::class, 'show']);
+});
+
+// Every write stays Super Admin only. This is where roles are edited, so an ADMIN with access
+// could promote itself and the two roles would stop being distinguishable.
+Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('users')->group(function () {
+    Route::post('/', [UserController::class, 'store']);
     Route::put('/{uid}', [UserController::class, 'update']);
     Route::delete('/{uid}', [UserController::class, 'destroy']);
 });
@@ -121,7 +127,7 @@ Route::middleware(['auth:api', 'eo'])->group(function () {
 Route::get('/events/{slug}', [EventController::class, 'showBySlug']);
 
 // Events — Super Admin
-Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('admin')->group(function () {
+Route::middleware(['auth:api', 'role:SUPER_ADMIN,ADMIN'])->prefix('admin')->group(function () {
     Route::get('/events', [EventController::class, 'adminIndex']);
     Route::get('/events/{id}', [EventController::class, 'adminShow']);
     Route::post('/events/{id}/verify', [EventController::class, 'verify']);
@@ -183,7 +189,7 @@ Route::middleware(['auth:api', 'eo'])->group(function () {
 });
 
 // Talents — Super Admin management
-Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('admin')->group(function () {
+Route::middleware(['auth:api', 'role:SUPER_ADMIN,ADMIN'])->prefix('admin')->group(function () {
     Route::get('/talents', [TalentController::class, 'adminIndex']);
     Route::post('/talents/{id}/verify', [TalentController::class, 'verify']);
     Route::get('/talent-categories', [TalentCategoryController::class, 'adminIndex']);
@@ -232,7 +238,7 @@ Route::middleware(['auth:api', EnsureCatalogAccess::class])->prefix('catalog')->
     });
 });
 
-Route::middleware(['auth:api', 'role:SUPER_ADMIN', EnsureCatalogAccess::class.':admin'])->prefix('admin/catalog/releases')->group(function () {
+Route::middleware(['auth:api', 'role:SUPER_ADMIN,ADMIN', EnsureCatalogAccess::class.':admin'])->prefix('admin/catalog/releases')->group(function () {
     Route::get('/', [AdminCatalogController::class, 'index']);
     Route::prefix('{release}')->whereUuid('release')->group(function () {
         Route::get('/', [AdminCatalogController::class, 'show']);
@@ -247,7 +253,7 @@ Route::middleware(['auth:api', 'role:SUPER_ADMIN', EnsureCatalogAccess::class.':
     });
 });
 
-Route::middleware(['auth:api', 'role:SUPER_ADMIN', EnsureCatalogAccess::class.':admin'])->prefix('admin/catalog')->group(function () {
+Route::middleware(['auth:api', 'role:SUPER_ADMIN,ADMIN', EnsureCatalogAccess::class.':admin'])->prefix('admin/catalog')->group(function () {
     Route::get('/{masterType}', [CatalogMasterDataController::class, 'adminIndex'])->where('masterType', 'genres|languages|territories|timezones|dsps');
     Route::post('/dsps/{code}/logo', [CatalogMasterDataController::class, 'uploadDspLogo'])->where('code', '[a-z0-9_-]+');
     Route::post('/{masterType}', [CatalogMasterDataController::class, 'store'])->where('masterType', 'genres|languages|territories|timezones|dsps');

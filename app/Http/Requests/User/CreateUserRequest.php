@@ -2,13 +2,16 @@
 
 namespace App\Http\Requests\User;
 
+use App\Enums\UserRole;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Exceptions\HttpResponseException;
+use Illuminate\Validation\Rule;
 
 /**
- * Console account creation. The role is not accepted from the client: this endpoint only ever
- * mints super admins, and regular members sign themselves up through /auth/register.
+ * Console account creation. Only the two staff roles may be requested, and the caller is already
+ * a SUPER_ADMIN by the time this runs; regular members sign themselves up through /auth/register.
+ * Omitting the role yields an ADMIN, the lesser of the two.
  */
 class CreateUserRequest extends FormRequest
 {
@@ -23,6 +26,7 @@ class CreateUserRequest extends FormRequest
             'username'      => ['nullable', 'string', 'max:50', 'alpha_dash', 'unique:users,username'],
             'phone'         => ['nullable', 'string', 'max:20'],
             'date_of_birth' => ['nullable', 'date', 'date_format:Y-m-d', 'before:today'],
+            'role'          => ['sometimes', Rule::in([UserRole::SuperAdmin->value, UserRole::Admin->value])],
             'is_active'     => ['sometimes', 'boolean'],
         ];
     }

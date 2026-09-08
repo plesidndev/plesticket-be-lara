@@ -9,7 +9,7 @@ class TalentResource extends JsonResource
 {
     public function toArray(Request $request): array
     {
-        $isAdmin = auth('api')->check() && auth('api')->user()?->role->value === 'SUPER_ADMIN';
+        $isAdmin = auth('api')->check() && auth('api')->user()?->role->isStaff();
 
         return [
             'id'           => $this->id,

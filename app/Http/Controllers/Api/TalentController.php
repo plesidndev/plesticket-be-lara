@@ -60,7 +60,7 @@ class TalentController extends Controller
 
     public function update(UpdateTalentRequest $request, int $id): JsonResponse
     {
-        $isAdmin = auth('api')->user()?->role->value === 'SUPER_ADMIN';
+        $isAdmin = (bool) auth('api')->user()?->role->isStaff();
 
         try {
             $talent = $this->service->update($id, auth('api')->id(), $isAdmin, $request->validated());
@@ -73,7 +73,7 @@ class TalentController extends Controller
 
     public function destroy(int $id): JsonResponse
     {
-        $isAdmin = auth('api')->user()?->role->value === 'SUPER_ADMIN';
+        $isAdmin = (bool) auth('api')->user()?->role->isStaff();
 
         try {
             $this->service->delete($id, auth('api')->id(), $isAdmin);

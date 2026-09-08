@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Enums\UserRole;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -13,7 +12,7 @@ class EnsureCatalogAccess
     {
         $user = $request->user('api');
         $hasAccess = $audience === 'admin'
-            ? $user?->role === UserRole::SuperAdmin
+            ? (bool) $user?->role?->isStaff()
             : $user?->is_plesconnect_user;
         abort_unless($user && $user->is_active && $hasAccess, 403, 'An active account with catalog access is required.');
 

@@ -23,30 +23,41 @@ class AdminUserCrudTest extends TestCase
         $this->member = User::create(['uid' => 'U000001', 'name' => 'Budi Santoso', 'email' => 'budi@example.com', 'password' => 'secret', 'role' => 'REGISTERED_USER']);
     }
 
-    public function test_it_creates_an_admin_account_with_a_super_admin_uid(): void
+    public function test_it_defaults_a_new_staff_account_to_admin(): void
     {
         $this->actingAs($this->admin, 'api')->postJson('/api/users', [
             'name' => 'New Admin', 'email' => 'New.Admin@Example.com', 'password' => 'password123',
             'password_confirmation' => 'password123',
         ])->assertCreated()
-            ->assertJsonPath('data.role', 'SUPER_ADMIN')
+            ->assertJsonPath('data.role', 'ADMIN')
+            ->assertJsonPath('data.role_label', 'Admin')
             ->assertJsonPath('data.email', 'new.admin@example.com')
             ->assertJsonPath('data.is_active', true);
 
         $created = User::where('email', 'new.admin@example.com')->firstOrFail();
-        $this->assertSame('SA'.sprintf('%04d', $created->id), $created->uid);
+        $this->assertSame('AD'.sprintf('%04d', $created->id), $created->uid);
         $this->assertNotSame('password123', $created->password);
     }
 
-    public function test_it_ignores_a_role_supplied_by_the_client_and_still_creates_an_admin(): void
+    public function test_it_creates_a_super_admin_when_the_role_is_asked_for(): void
+    {
+        $this->actingAs($this->admin, 'api')->postJson('/api/users', [
+            'name' => 'Second Super', 'email' => 'super2@example.com', 'password' => 'password123',
+            'password_confirmation' => 'password123', 'role' => 'SUPER_ADMIN',
+        ])->assertCreated()->assertJsonPath('data.role', 'SUPER_ADMIN');
+
+        $created = User::where('email', 'super2@example.com')->firstOrFail();
+        $this->assertSame('SA'.sprintf('%04d', $created->id), $created->uid);
+    }
+
+    public function test_it_rejects_a_non_staff_role_on_create(): void
     {
         $this->actingAs($this->admin, 'api')->postJson('/api/users', [
             'name' => 'Sneaky Member', 'email' => 'member@example.com', 'password' => 'password123',
             'password_confirmation' => 'password123', 'role' => 'REGISTERED_USER',
-        ])->assertCreated()->assertJsonPath('data.role', 'SUPER_ADMIN');
+        ])->assertStatus(422)->assertJsonValidationErrors(['role']);
 
-        $created = User::where('email', 'member@example.com')->firstOrFail();
-        $this->assertSame('SA'.sprintf('%04d', $created->id), $created->uid);
+        $this->assertSame(2, User::count());
     }
 
     public function test_it_rejects_duplicate_emails_and_unconfirmed_passwords(): void
@@ -66,6 +77,14 @@ class AdminUserCrudTest extends TestCase
 
         $this->actingAs($this->admin, 'api')->getJson('/api/users?role=REGISTERED_USER')
             ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.uid', 'U000001');
+    }
+
+    public function test_it_filters_the_directory_by_several_roles_at_once(): void
+    {
+        User::create(['uid' => 'AD0001', 'name' => 'Staff', 'email' => 'staff@example.com', 'password' => 'secret', 'role' => 'ADMIN']);
+
+        $this->actingAs($this->admin, 'api')->getJson('/api/users?role=SUPER_ADMIN,ADMIN')
+            ->assertOk()->assertJsonCount(2, 'data')->assertJsonPath('meta.total', 2);
     }
 
     public function test_it_changes_a_role_through_update(): void
@@ -126,5 +145,55 @@ class AdminUserCrudTest extends TestCase
         $this->actingAs($this->admin, 'api')->putJson('/api/users/U000001', [
             'name' => 'Budi Renamed', 'email' => 'budi@example.com',
         ])->assertOk()->assertJsonPath('data.name', 'Budi Renamed');
+    }
+
+    public function test_an_admin_reaches_the_console_but_cannot_write_to_user_management(): void
+    {
+        $staff = $this->staff();
+
+        $this->actingAs($staff, 'api')->getJson('/api/admin/categories')->assertOk();
+        $this->actingAs($staff, 'api')->getJson('/api/admin/events')->assertOk();
+
+        $this->actingAs($staff, 'api')->postJson('/api/users', [
+            'name' => 'Nope', 'email' => 'nope@example.com', 'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertForbidden();
+        $this->actingAs($staff, 'api')->putJson('/api/users/AD0001', ['role' => 'SUPER_ADMIN'])->assertForbidden();
+        $this->actingAs($staff, 'api')->deleteJson('/api/users/U000001')->assertForbidden();
+
+        $this->assertSame('ADMIN', $staff->fresh()->role->value);
+    }
+
+    public function test_an_admin_sees_only_members_in_the_directory(): void
+    {
+        $staff = $this->staff();
+
+        $this->actingAs($staff, 'api')->getJson('/api/users')
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.uid', 'U000001');
+    }
+
+    public function test_an_admin_cannot_widen_the_directory_back_to_staff(): void
+    {
+        $staff = $this->staff();
+
+        $this->actingAs($staff, 'api')->getJson('/api/users?role=SUPER_ADMIN')
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.role', 'REGISTERED_USER');
+
+        $this->actingAs($staff, 'api')->getJson('/api/users?role=SUPER_ADMIN,ADMIN')
+            ->assertOk()->assertJsonCount(1, 'data')->assertJsonPath('data.0.role', 'REGISTERED_USER');
+    }
+
+    public function test_an_admin_cannot_open_a_staff_account(): void
+    {
+        $staff = $this->staff();
+
+        $this->actingAs($staff, 'api')->getJson('/api/users/U000001')->assertOk();
+        $this->actingAs($staff, 'api')->getJson('/api/users/SA0001')->assertNotFound();
+        $this->actingAs($staff, 'api')->getJson('/api/users/AD0001')->assertNotFound();
+    }
+
+    private function staff(): User
+    {
+        return User::create(['uid' => 'AD0001', 'name' => 'Staff', 'email' => 'staff@example.com', 'password' => 'secret', 'role' => 'ADMIN']);
     }
 }

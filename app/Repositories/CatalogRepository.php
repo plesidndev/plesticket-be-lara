@@ -112,6 +112,6 @@ class CatalogRepository implements CatalogRepositoryInterface
 
     public function isActiveAdmin(int $id): bool
     {
-        return User::whereKey($id)->where('role', 'SUPER_ADMIN')->where('is_active', true)->exists();
+        return User::whereKey($id)->whereIn('role', ['SUPER_ADMIN', 'ADMIN'])->where('is_active', true)->exists();
     }
 }

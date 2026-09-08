@@ -57,9 +57,33 @@ Every domain follows: `Model` → `RepositoryInterface` → `Repository` → `Se
 
 ### Platform roles (`App\Enums\UserRole`) — stored in `users.role`
 ```php
-UserRole::SuperAdmin     // 'SUPER_ADMIN'      full platform access
+UserRole::SuperAdmin     // 'SUPER_ADMIN'      full platform access, incl. all of /api/users
+UserRole::Admin          // 'ADMIN'            console access; members read-only, no user writes
 UserRole::RegisteredUser // 'REGISTERED_USER'  creates events, manages organizer members
 ```
+
+`SUPER_ADMIN` and `ADMIN` are the two **staff** roles — `UserRole::isStaff()` is the
+check to use for "may see the admin console", rather than comparing to `SuperAdmin`.
+
+`/api/users` is split rather than blanket-gated:
+
+| Route | Who | Notes |
+|---|---|---|
+| `GET /users`, `GET /users/{uid}` | `SUPER_ADMIN`, `ADMIN` | an `ADMIN` sees **members only** |
+| `POST /users`, `PUT /users/{uid}`, `DELETE /users/{uid}` | `SUPER_ADMIN` | every write |
+
+Writes stay super-admin-only because that is where roles are edited — an `ADMIN`
+that could reach them would promote itself and the distinction would vanish.
+
+The members-only scope is enforced in `UserController`, not in the caller:
+`index()` overwrites `role` with `REGISTERED_USER` for an `ADMIN` (so a
+hand-written `?role=SUPER_ADMIN` cannot widen it) and `show()` 404s a staff
+account. Do not move that check into a UI or a query default.
+
+Staff accounts are created by a super admin at `POST /api/users`, which accepts
+`role` restricted to `SUPER_ADMIN|ADMIN` and defaults to `ADMIN`. Regular members
+still sign themselves up at `/auth/register`. uid prefixes: `SA%04d`, `AD%04d`,
+`U%06d`.
 
 ### Organizer roles (`App\Enums\OrganizerRole`) — stored in `organizer_members.role`
 ```php
@@ -123,7 +147,8 @@ events and buy tickets to someone else's. `UserRole` stays two-valued
 ```php
 Route::middleware('auth:api')->group(fn() => ...);
 Route::middleware('auth:organizer')->group(fn() => ...);
-Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->group(fn() => ...);
+Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->group(fn() => ...);       // super admin only
+Route::middleware(['auth:api', 'role:SUPER_ADMIN,ADMIN'])->group(fn() => ...); // any staff
 ```
 
 ## Environment Variables

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\CreateUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
@@ -26,6 +27,12 @@ class UserController extends Controller
             $filters['is_active'] = filter_var($filters['is_active'], FILTER_VALIDATE_BOOLEAN);
         }
 
+        // An ADMIN sees members and nothing else. Pinned here rather than trusted from the query,
+        // so a hand-written role= cannot widen it to the staff directory.
+        if ($this->actorIsAdmin($request)) {
+            $filters['role'] = UserRole::RegisteredUser->value;
+        }
+
         $paginator = $this->service->list((int) $request->query('limit', 15), $filters);
 
         return $this->paginated('Users retrieved.', UserResource::collection($paginator), $paginator);
@@ -39,7 +46,7 @@ class UserController extends Controller
         return $this->created('Admin user created.', new UserResource($user));
     }
 
-    public function show(string $uid): JsonResponse
+    public function show(Request $request, string $uid): JsonResponse
     {
         try {
             $user = $this->service->findByUid($uid);
@@ -47,7 +54,17 @@ class UserController extends Controller
             return $this->error($exception->getMessage(), 404);
         }
 
+        // Staff accounts are invisible to an ADMIN, matching the directory it is allowed to list.
+        if ($this->actorIsAdmin($request) && $user->role->isStaff()) {
+            return $this->error('User not found.', 404);
+        }
+
         return $this->success('User retrieved.', new UserResource($user));
+    }
+
+    private function actorIsAdmin(Request $request): bool
+    {
+        return $request->user()?->role === UserRole::Admin;
     }
 
     public function update(UpdateUserRequest $request, string $uid): JsonResponse

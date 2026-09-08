@@ -21,9 +21,10 @@ class UserService
     }
 
     /**
-     * Create a super admin from the console. Mirrors AuthService::register but issues no token,
+     * Create a staff account from the console. Mirrors AuthService::register but issues no token,
      * since the acting super admin is creating the account on someone else's behalf. The role is
-     * fixed here rather than taken from input: regular members sign themselves up via /auth/register.
+     * narrowed to the two staff roles by CreateUserRequest, and defaults to the lesser one;
+     * regular members sign themselves up via /auth/register.
      */
     public function createAdmin(array $data): User
     {
@@ -34,7 +35,7 @@ class UserService
             'phone' => $data['phone'] ?? null,
             'date_of_birth' => $data['date_of_birth'] ?? null,
             'password' => $data['password'],
-            'role' => UserRole::SuperAdmin,
+            'role' => isset($data['role']) ? UserRole::from($data['role']) : UserRole::Admin,
             'is_active' => $data['is_active'] ?? true,
         ]);
     }

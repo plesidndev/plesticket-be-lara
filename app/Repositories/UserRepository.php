@@ -15,6 +15,7 @@ class UserRepository implements UserRepositoryInterface
 
         $uid = match ($user->role) {
             UserRole::SuperAdmin => sprintf('SA%04d', $user->id),
+            UserRole::Admin => sprintf('AD%04d', $user->id),
             default => sprintf('U%06d', $user->id),
         };
 
@@ -42,8 +43,12 @@ class UserRepository implements UserRepositoryInterface
     {
         $query = User::query()->orderBy('id');
 
+        // Accepts one role or a comma-separated list, so a console can pull SUPER_ADMIN and ADMIN
+        // as a single "staff" directory with working totals instead of filtering client-side.
         if (! empty($filters['role'])) {
-            $query->where('role', $filters['role']);
+            $roles = array_values(array_filter(array_map('trim', explode(',', (string) $filters['role']))));
+
+            $query->whereIn('role', $roles);
         }
 
         if (isset($filters['is_active'])) {
