@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\OrderStatus;
 use App\Enums\TicketStatus;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\Ticket;
 use App\Repositories\Contracts\EventRepositoryInterface;
 use App\Repositories\Contracts\OrderRepositoryInterface;
@@ -255,6 +256,62 @@ class OrderService
 
             return true;
         });
+    }
+
+    /**
+     * Console-wide listing, scoped to nobody. Every filter is optional.
+     *
+     * @param  array<string, mixed>  $filters
+     */
+    public function listForConsole(int $perPage, array $filters = []): LengthAwarePaginator
+    {
+        return $this->orders->paginateForConsole($perPage, $filters);
+    }
+
+    public function findForConsole(string $orderNumber): Order
+    {
+        $order = $this->orders->findByOrderNumber($orderNumber);
+
+        if (! $order) {
+            throw new RuntimeException('Order not found.');
+        }
+
+        return $order->load(['event', 'buyer', 'agent', 'payments', 'items.tickets']);
+    }
+
+    /**
+     * Cancel from the console. Not scoped to an owner, but it keeps the buyer flow's rule:
+     * only a pending order can be cancelled, and its held quota is returned.
+     */
+    public function cancelFromConsole(string $orderNumber): Order
+    {
+        $order = $this->findForConsole($orderNumber);
+
+        if ($order->status !== OrderStatus::PendingPayment) {
+            throw new InvalidArgumentException('Only pending orders can be cancelled.');
+        }
+
+        $this->restoreQuotas($order);
+
+        return $this->orders->update($order, ['status' => OrderStatus::Cancelled]);
+    }
+
+    /**
+     * Clear the refund flag once the money has been returned out of band. Nothing else clears it,
+     * so without this the refund queue only ever grows.
+     */
+    public function settleRefund(string $orderNumber): Order
+    {
+        $order = $this->findForConsole($orderNumber);
+        $flagged = $order->payments->where('requires_refund', true);
+
+        if ($flagged->isEmpty()) {
+            throw new InvalidArgumentException('This order has no refund awaiting settlement.');
+        }
+
+        $flagged->each(fn (Payment $payment) => $payment->update(['requires_refund' => false]));
+
+        return $order->fresh(['event', 'buyer', 'agent', 'payments', 'items.tickets']);
     }
 
     public function cancel(string $orderNumber, int $buyerId): Order

@@ -29,6 +29,9 @@ enum Permission: string
     case CatalogManage = 'catalog.manage';
     case CatalogMastersManage = 'catalog_masters.manage';
 
+    case OrdersView = 'orders.view';
+    case OrdersManage = 'orders.manage';
+
     case UsersView = 'users.view';
     case UsersViewStaff = 'users.view_staff';
     case UsersManage = 'users.manage';
@@ -43,6 +46,7 @@ enum Permission: string
             self::EventsView, self::EventsModerate => 'events',
             self::TalentsView, self::TalentsModerate => 'talents',
             self::CatalogView, self::CatalogManage, self::CatalogMastersManage => 'catalog',
+            self::OrdersView, self::OrdersManage => 'orders',
             self::UsersView, self::UsersViewStaff, self::UsersManage => 'users',
         };
     }
@@ -62,6 +66,8 @@ enum Permission: string
             self::CatalogView => 'View catalog releases',
             self::CatalogManage => 'Review, assign and distribute releases',
             self::CatalogMastersManage => 'Manage catalog master data',
+            self::OrdersView => 'View ticket transactions',
+            self::OrdersManage => 'Cancel orders and settle refunds',
             self::UsersView => 'View the member directory',
             self::UsersViewStaff => 'See staff accounts in the directory',
             self::UsersManage => 'Create, edit and delete accounts',

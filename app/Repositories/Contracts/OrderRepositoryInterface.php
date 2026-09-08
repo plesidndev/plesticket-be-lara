@@ -11,6 +11,7 @@ interface OrderRepositoryInterface
     public function paginateByAgent(int $agentId, int $perPage, ?string $search): LengthAwarePaginator;
     public function paginateAgentOrdersByEvent(string $eventId, int $perPage, ?string $search): LengthAwarePaginator;
     public function agentsSummaryByEvent(string $eventId): array;
+    public function paginateForConsole(int $perPage, array $filters = []): LengthAwarePaginator;
     public function findByOrderNumber(string $orderNumber): ?Order;
 
     /** Unpaid orders whose hold has lapsed and whose quota is still reserved. */

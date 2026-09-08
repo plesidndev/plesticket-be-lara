@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AdminCatalogController;
 use App\Http\Controllers\Api\AdminOperationsController;
+use App\Http\Controllers\Api\AdminOrderController;
 use App\Http\Controllers\Api\AdminSummaryController;
 use App\Http\Controllers\Api\AgentEventController;
 use App\Http\Controllers\Api\AgentOrderController;
@@ -90,6 +91,10 @@ Route::middleware(['auth:api', 'permission:console.access'])->prefix('admin')->g
     Route::get('/summary', AdminSummaryController::class)->middleware('permission:summary.view');
     Route::get('/operations/refunds', [AdminOperationsController::class, 'refunds'])->middleware('permission:operations.view');
     Route::get('/operations/webhooks', [AdminOperationsController::class, 'webhooks'])->middleware('permission:operations.view');
+    Route::get('/orders', [AdminOrderController::class, 'index'])->middleware('permission:orders.view');
+    Route::get('/orders/{orderNumber}', [AdminOrderController::class, 'show'])->middleware('permission:orders.view');
+    Route::post('/orders/{orderNumber}/cancel', [AdminOrderController::class, 'cancel'])->middleware('permission:orders.manage');
+    Route::post('/orders/{orderNumber}/settle-refund', [AdminOrderController::class, 'settleRefund'])->middleware('permission:orders.manage');
     Route::get('/categories', [CategoryController::class, 'adminIndex'])->middleware('permission:categories.view');
     Route::post('/categories', [CategoryController::class, 'store'])->middleware('permission:categories.manage');
     Route::put('/categories/{id}', [CategoryController::class, 'update'])->middleware('permission:categories.manage');
