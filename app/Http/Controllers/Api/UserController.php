@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\User\CreateUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
 use App\Http\Resources\UserResource;
 use App\Services\UserService;
@@ -28,6 +29,14 @@ class UserController extends Controller
         $paginator = $this->service->list((int) $request->query('limit', 15), $filters);
 
         return $this->paginated('Users retrieved.', UserResource::collection($paginator), $paginator);
+    }
+
+    // SUPER_ADMIN — create another super admin. Regular members register themselves.
+    public function store(CreateUserRequest $request): JsonResponse
+    {
+        $user = $this->service->createAdmin($request->validated());
+
+        return $this->created('Admin user created.', new UserResource($user));
     }
 
     public function show(string $uid): JsonResponse

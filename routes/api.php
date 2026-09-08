@@ -98,6 +98,7 @@ Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('admin')->group(func
 // User management — Super Admin only
 Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('users')->group(function () {
     Route::get('/', [UserController::class, 'index']);
+    Route::post('/', [UserController::class, 'store']);
     Route::get('/{uid}', [UserController::class, 'show']);
     Route::put('/{uid}', [UserController::class, 'update']);
     Route::delete('/{uid}', [UserController::class, 'destroy']);

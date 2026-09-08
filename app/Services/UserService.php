@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Enums\UserRole;
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use Illuminate\Http\UploadedFile;
@@ -17,6 +18,25 @@ class UserService
     public function list(int $perPage = 15, array $filters = []): LengthAwarePaginator
     {
         return $this->users->paginate($perPage, $filters);
+    }
+
+    /**
+     * Create a super admin from the console. Mirrors AuthService::register but issues no token,
+     * since the acting super admin is creating the account on someone else's behalf. The role is
+     * fixed here rather than taken from input: regular members sign themselves up via /auth/register.
+     */
+    public function createAdmin(array $data): User
+    {
+        return $this->users->create([
+            'name' => $data['name'],
+            'username' => $data['username'] ?? null,
+            'email' => strtolower(trim($data['email'])),
+            'phone' => $data['phone'] ?? null,
+            'date_of_birth' => $data['date_of_birth'] ?? null,
+            'password' => $data['password'],
+            'role' => UserRole::SuperAdmin,
+            'is_active' => $data['is_active'] ?? true,
+        ]);
     }
 
     public function findByUid(string $uid): User
