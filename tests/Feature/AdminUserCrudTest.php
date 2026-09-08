@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
 class AdminUserCrudTest extends TestCase
@@ -83,5 +84,47 @@ class AdminUserCrudTest extends TestCase
         ])->assertForbidden();
 
         $this->assertSame(2, User::count());
+    }
+
+    public function test_it_updates_every_editable_profile_field(): void
+    {
+        $this->actingAs($this->admin, 'api')->putJson('/api/users/U000001', [
+            'name' => 'Budi Updated', 'username' => 'budi_updated', 'email' => 'Budi.New@Example.com',
+            'phone' => '08111', 'date_of_birth' => '1992-03-04', 'is_active' => false,
+        ])->assertOk()
+            ->assertJsonPath('data.username', 'budi_updated')
+            ->assertJsonPath('data.email', 'budi.new@example.com')
+            ->assertJsonPath('data.date_of_birth', '1992-03-04')
+            ->assertJsonPath('data.is_active', false);
+
+        $this->assertSame('08111', $this->member->fresh()->phone);
+    }
+
+    public function test_it_resets_a_password_without_touching_other_fields(): void
+    {
+        $this->actingAs($this->admin, 'api')->putJson('/api/users/U000001', [
+            'password' => 'brandnewpass', 'password_confirmation' => 'brandnewpass',
+        ])->assertOk();
+
+        $fresh = $this->member->fresh();
+        $this->assertTrue(Hash::check('brandnewpass', $fresh->password));
+        $this->assertSame('Budi Santoso', $fresh->name);
+        $this->assertSame('budi@example.com', $fresh->email);
+    }
+
+    public function test_it_rejects_an_unconfirmed_password_and_a_taken_email(): void
+    {
+        $this->actingAs($this->admin, 'api')->putJson('/api/users/U000001', [
+            'email' => 'admin@example.com', 'password' => 'brandnewpass', 'password_confirmation' => 'mismatch',
+        ])->assertStatus(422)->assertJsonValidationErrors(['email', 'password']);
+
+        $this->assertSame('budi@example.com', $this->member->fresh()->email);
+    }
+
+    public function test_it_allows_an_account_to_keep_its_own_email_and_username(): void
+    {
+        $this->actingAs($this->admin, 'api')->putJson('/api/users/U000001', [
+            'name' => 'Budi Renamed', 'email' => 'budi@example.com',
+        ])->assertOk()->assertJsonPath('data.name', 'Budi Renamed');
     }
 }

@@ -50,9 +50,17 @@ class UserService
         return $user;
     }
 
+    /**
+     * Apply a partial update. Only the keys present are written, so callers can send a single field.
+     * Email is normalised the same way registration does it; the password cast handles hashing.
+     */
     public function update(string $uid, array $data): User
     {
         $user = $this->findByUid($uid);
+
+        if (isset($data['email'])) {
+            $data['email'] = strtolower(trim($data['email']));
+        }
 
         return $this->users->update($user, $data);
     }
