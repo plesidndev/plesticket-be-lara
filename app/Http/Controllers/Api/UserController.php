@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Enums\Permission;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\CreateUserRequest;
@@ -27,9 +28,9 @@ class UserController extends Controller
             $filters['is_active'] = filter_var($filters['is_active'], FILTER_VALIDATE_BOOLEAN);
         }
 
-        // An ADMIN sees members and nothing else. Pinned here rather than trusted from the query,
-        // so a hand-written role= cannot widen it to the staff directory.
-        if ($this->actorIsAdmin($request)) {
+        // Without users.view_staff the directory is members only. Pinned here rather than trusted
+        // from the query, so a hand-written role= cannot widen it back to the staff accounts.
+        if (! $this->canSeeStaff($request)) {
             $filters['role'] = UserRole::RegisteredUser->value;
         }
 
@@ -38,7 +39,7 @@ class UserController extends Controller
         return $this->paginated('Users retrieved.', UserResource::collection($paginator), $paginator);
     }
 
-    // SUPER_ADMIN — create another super admin. Regular members register themselves.
+    // Needs users.manage. Regular members register themselves at /auth/register.
     public function store(CreateUserRequest $request): JsonResponse
     {
         $user = $this->service->createAdmin($request->validated());
@@ -54,17 +55,18 @@ class UserController extends Controller
             return $this->error($exception->getMessage(), 404);
         }
 
-        // Staff accounts are invisible to an ADMIN, matching the directory it is allowed to list.
-        if ($this->actorIsAdmin($request) && $user->role->isStaff()) {
+        // Staff accounts are invisible without users.view_staff, matching the directory above.
+        // 404 rather than 403: a 403 would confirm the account exists.
+        if ($user->role->isStaff() && ! $this->canSeeStaff($request)) {
             return $this->error('User not found.', 404);
         }
 
         return $this->success('User retrieved.', new UserResource($user));
     }
 
-    private function actorIsAdmin(Request $request): bool
+    private function canSeeStaff(Request $request): bool
     {
-        return $request->user()?->role === UserRole::Admin;
+        return $request->user()?->hasPermission(Permission::UsersViewStaff) === true;
     }
 
     public function update(UpdateUserRequest $request, string $uid): JsonResponse

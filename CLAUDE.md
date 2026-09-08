@@ -57,33 +57,71 @@ Every domain follows: `Model` → `RepositoryInterface` → `Repository` → `Se
 
 ### Platform roles (`App\Enums\UserRole`) — stored in `users.role`
 ```php
-UserRole::SuperAdmin     // 'SUPER_ADMIN'      full platform access, incl. all of /api/users
-UserRole::Admin          // 'ADMIN'            console access; members read-only, no user writes
+UserRole::SuperAdmin     // 'SUPER_ADMIN'      bypasses every permission check
+UserRole::Admin          // 'ADMIN'            console preset; real access comes from grants
 UserRole::RegisteredUser // 'REGISTERED_USER'  creates events, manages organizer members
 ```
 
-`SUPER_ADMIN` and `ADMIN` are the two **staff** roles — `UserRole::isStaff()` is the
-check to use for "may see the admin console", rather than comparing to `SuperAdmin`.
+`SUPER_ADMIN` and `ADMIN` are the two **staff** roles — `UserRole::isStaff()`
+answers "is this a console account at all". What a console account may *do* is
+decided by permission grants; see **Admin RBAC** below.
 
-`/api/users` is split rather than blanket-gated:
+Staff accounts are created at `POST /api/users`, which accepts `role` restricted
+to `SUPER_ADMIN|ADMIN` and defaults to `ADMIN`. Regular members still sign
+themselves up at `/auth/register`. uid prefixes: `SA%04d`, `AD%04d`, `U%06d`.
 
-| Route | Who | Notes |
-|---|---|---|
-| `GET /users`, `GET /users/{uid}` | `SUPER_ADMIN`, `ADMIN` | an `ADMIN` sees **members only** |
-| `POST /users`, `PUT /users/{uid}`, `DELETE /users/{uid}` | `SUPER_ADMIN` | every write |
+## Admin RBAC
 
-Writes stay super-admin-only because that is where roles are edited — an `ADMIN`
-that could reach them would promote itself and the distinction would vanish.
+Authorization runs on **per-account permission grants**, not on the role. A role
+only decides which preset a new account starts from; after that the grants are
+the only thing consulted, so two admins can legitimately differ.
 
-The members-only scope is enforced in `UserController`, not in the caller:
-`index()` overwrites `role` with `REGISTERED_USER` for an `ADMIN` (so a
-hand-written `?role=SUPER_ADMIN` cannot widen it) and `show()` 404s a staff
-account. Do not move that check into a UI or a query default.
+```
+App\Enums\Permission          the catalog (an enum, not a table)
+user_permissions              one row per account per grant
+permission:<code> middleware  gates a route; several codes mean "any of"
+```
 
-Staff accounts are created by a super admin at `POST /api/users`, which accepts
-`role` restricted to `SUPER_ADMIN|ADMIN` and defaults to `ADMIN`. Regular members
-still sign themselves up at `/auth/register`. uid prefixes: `SA%04d`, `AD%04d`,
-`U%06d`.
+**The enum is the source of truth.** A permission the code checks exists by
+construction, and there is no seeder that can drift from what the middleware
+asks for.
+
+**A new admin starts with `console.access` + `summary.view` and nothing else** —
+the console door and the overview. Every other screen is granted deliberately
+from the permissions editor afterwards, so nobody is handed moderation or
+catalog access by the act of being created. That list is
+`UserRole::defaultPermissions()`, a preset applied at creation only.
+
+The `user_permissions` migration deliberately does **not** read that preset: it
+backfills existing admins with the access the old role gates already gave them,
+spelled out inline. A historical migration must not change what it grants
+because the preset for new accounts moved on.
+
+Three rules that are load-bearing:
+
+- **`SUPER_ADMIN` bypasses every check** and holds no rows. Hardcoded in
+  `User::hasPermission()`, so unticking the wrong box cannot lock everyone out.
+  Writing grants to a super admin is refused rather than stored.
+- **Grants are inert on a non-staff account.** `hasPermission()` returns false
+  for `REGISTERED_USER`, so demoting somebody revokes their access without
+  needing to delete rows.
+- **Nobody edits their own grants.** `UserService::syncPermissions()` refuses,
+  which closes self-escalation as well as self-lockout.
+
+**Never authorize from the JWT.** Permissions are read from the database per
+request (`User::permissionCodes()`, memoized per instance), so a revocation
+takes effect on the caller's next request rather than when their token expires.
+`UserResource` reports them for staff — the full catalog for a super admin, so
+a client can gate on the list alone without special-casing the role.
+
+`users.view_staff` is what widens the directory beyond members. `UserController`
+pins the `role` filter and 404s a staff account without it, so a hand-written
+`?role=SUPER_ADMIN` cannot widen it. Do not move that check into a UI.
+
+```
+GET  /api/users/{uid}/permissions   granted + the catalog, for building an editor
+PUT  /api/users/{uid}/permissions   replaces the set; an omitted code is revoked
+```
 
 ### Organizer roles (`App\Enums\OrganizerRole`) — stored in `organizer_members.role`
 ```php

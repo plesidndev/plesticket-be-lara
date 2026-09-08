@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Permission;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -192,8 +193,31 @@ class AdminUserCrudTest extends TestCase
         $this->actingAs($staff, 'api')->getJson('/api/users/AD0001')->assertNotFound();
     }
 
-    private function staff(): User
+    /**
+     * An admin granted the read-only console these tests are about: it can look at the member
+     * directory but holds neither users.manage nor users.view_staff.
+     *
+     * Spelled out rather than taken from UserRole::defaultPermissions(), which is deliberately
+     * narrower — a new admin starts with the overview alone. These tests are about what the
+     * directory shows a reader, not about what the preset hands out.
+     */
+    private function staff(array $permissions = []): User
     {
-        return User::create(['uid' => 'AD0001', 'name' => 'Staff', 'email' => 'staff@example.com', 'password' => 'secret', 'role' => 'ADMIN']);
+        $user = User::create(['uid' => 'AD0001', 'name' => 'Staff', 'email' => 'staff@example.com', 'password' => 'secret', 'role' => 'ADMIN']);
+
+        $codes = $permissions !== [] ? $permissions : [
+            Permission::ConsoleAccess->value,
+            Permission::SummaryView->value,
+            Permission::CategoriesView->value,
+            Permission::EventsView->value,
+            Permission::UsersView->value,
+        ];
+
+        $user->permissions()->createMany(array_map(
+            static fn (string $code): array => ['permission' => $code, 'granted_at' => now()],
+            $codes,
+        ));
+
+        return $user->load('permissions');
     }
 }

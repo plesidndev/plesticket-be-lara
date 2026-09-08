@@ -28,6 +28,7 @@ use App\Http\Controllers\Api\TalentCategoryController;
 use App\Http\Controllers\Api\TalentController;
 use App\Http\Controllers\Api\TicketController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\UserPermissionController;
 use App\Http\Controllers\Api\Webhook\XenditWebhookController;
 use App\Http\Middleware\EnsureCatalogAccess;
 use Illuminate\Support\Facades\Route;
@@ -84,30 +85,32 @@ Route::get('/banks', [BankController::class, 'index']);
 Route::get('/categories', [CategoryController::class, 'index']);
 Route::get('/payment-methods', [PaymentController::class, 'methods']);
 
-// Categories — Super Admin CRUD
-Route::middleware(['auth:api', 'role:SUPER_ADMIN,ADMIN'])->prefix('admin')->group(function () {
-    Route::get('/summary', AdminSummaryController::class);
-    Route::get('/operations/refunds', [AdminOperationsController::class, 'refunds']);
-    Route::get('/operations/webhooks', [AdminOperationsController::class, 'webhooks']);
-    Route::get('/categories', [CategoryController::class, 'adminIndex']);
-    Route::post('/categories', [CategoryController::class, 'store']);
-    Route::put('/categories/{id}', [CategoryController::class, 'update']);
-    Route::delete('/categories/{id}', [CategoryController::class, 'destroy']);
+// Admin console — gated per capability, not per role. A SUPER_ADMIN passes everything.
+Route::middleware(['auth:api', 'permission:console.access'])->prefix('admin')->group(function () {
+    Route::get('/summary', AdminSummaryController::class)->middleware('permission:summary.view');
+    Route::get('/operations/refunds', [AdminOperationsController::class, 'refunds'])->middleware('permission:operations.view');
+    Route::get('/operations/webhooks', [AdminOperationsController::class, 'webhooks'])->middleware('permission:operations.view');
+    Route::get('/categories', [CategoryController::class, 'adminIndex'])->middleware('permission:categories.view');
+    Route::post('/categories', [CategoryController::class, 'store'])->middleware('permission:categories.manage');
+    Route::put('/categories/{id}', [CategoryController::class, 'update'])->middleware('permission:categories.manage');
+    Route::delete('/categories/{id}', [CategoryController::class, 'destroy'])->middleware('permission:categories.manage');
 });
 
-// Reading the directory is open to both staff roles, but an ADMIN only ever sees members:
-// the controller pins its role filter to REGISTERED_USER and refuses to show a staff account.
-Route::middleware(['auth:api', 'role:SUPER_ADMIN,ADMIN'])->prefix('users')->group(function () {
+// Reading the directory needs users.view; whether staff accounts are included is a second
+// grant (users.view_staff), enforced in the controller so a hand-written ?role= cannot widen it.
+Route::middleware(['auth:api', 'permission:users.view'])->prefix('users')->group(function () {
     Route::get('/', [UserController::class, 'index']);
     Route::get('/{uid}', [UserController::class, 'show']);
 });
 
-// Every write stays Super Admin only. This is where roles are edited, so an ADMIN with access
-// could promote itself and the two roles would stop being distinguishable.
-Route::middleware(['auth:api', 'role:SUPER_ADMIN'])->prefix('users')->group(function () {
+// Writes need users.manage. Granting it is what lets an account edit roles and permissions,
+// so it is the one to withhold from anybody who should not be able to escalate themselves.
+Route::middleware(['auth:api', 'permission:users.manage'])->prefix('users')->group(function () {
     Route::post('/', [UserController::class, 'store']);
     Route::put('/{uid}', [UserController::class, 'update']);
     Route::delete('/{uid}', [UserController::class, 'destroy']);
+    Route::get('/{uid}/permissions', [UserPermissionController::class, 'show']);
+    Route::put('/{uid}/permissions', [UserPermissionController::class, 'update']);
 });
 
 // Events — public
@@ -126,13 +129,13 @@ Route::middleware(['auth:api', 'eo'])->group(function () {
 // Public event by slug (after /my to avoid swallowing it)
 Route::get('/events/{slug}', [EventController::class, 'showBySlug']);
 
-// Events — Super Admin
-Route::middleware(['auth:api', 'role:SUPER_ADMIN,ADMIN'])->prefix('admin')->group(function () {
-    Route::get('/events', [EventController::class, 'adminIndex']);
-    Route::get('/events/{id}', [EventController::class, 'adminShow']);
-    Route::post('/events/{id}/verify', [EventController::class, 'verify']);
-    Route::post('/events/{id}/reject', [EventController::class, 'reject']);
-    Route::post('/events/{id}/suspend', [EventController::class, 'suspend']);
+// Events — admin moderation
+Route::middleware(['auth:api', 'permission:console.access'])->prefix('admin')->group(function () {
+    Route::get('/events', [EventController::class, 'adminIndex'])->middleware('permission:events.view');
+    Route::get('/events/{id}', [EventController::class, 'adminShow'])->middleware('permission:events.view');
+    Route::post('/events/{id}/verify', [EventController::class, 'verify'])->middleware('permission:events.moderate');
+    Route::post('/events/{id}/reject', [EventController::class, 'reject'])->middleware('permission:events.moderate');
+    Route::post('/events/{id}/suspend', [EventController::class, 'suspend'])->middleware('permission:events.moderate');
 });
 
 // Organizer member management — scoped per event, owner only
@@ -188,13 +191,13 @@ Route::middleware(['auth:api', 'eo'])->group(function () {
     Route::delete('/talents/{id}', [TalentController::class, 'destroy']);
 });
 
-// Talents — Super Admin management
-Route::middleware(['auth:api', 'role:SUPER_ADMIN,ADMIN'])->prefix('admin')->group(function () {
-    Route::get('/talents', [TalentController::class, 'adminIndex']);
-    Route::post('/talents/{id}/verify', [TalentController::class, 'verify']);
-    Route::get('/talent-categories', [TalentCategoryController::class, 'adminIndex']);
-    Route::post('/talent-categories', [TalentCategoryController::class, 'store']);
-    Route::patch('/talent-categories/{code}', [TalentCategoryController::class, 'update'])->where('code', '[a-z0-9_-]+');
+// Talents — admin management
+Route::middleware(['auth:api', 'permission:console.access'])->prefix('admin')->group(function () {
+    Route::get('/talents', [TalentController::class, 'adminIndex'])->middleware('permission:talents.view');
+    Route::post('/talents/{id}/verify', [TalentController::class, 'verify'])->middleware('permission:talents.moderate');
+    Route::get('/talent-categories', [TalentCategoryController::class, 'adminIndex'])->middleware('permission:talents.view');
+    Route::post('/talent-categories', [TalentCategoryController::class, 'store'])->middleware('permission:talents.moderate');
+    Route::patch('/talent-categories/{code}', [TalentCategoryController::class, 'update'])->where('code', '[a-z0-9_-]+')->middleware('permission:talents.moderate');
 });
 
 // Event lineup (talents per event) — authenticated EO manages, public can read
@@ -238,24 +241,24 @@ Route::middleware(['auth:api', EnsureCatalogAccess::class])->prefix('catalog')->
     });
 });
 
-Route::middleware(['auth:api', 'role:SUPER_ADMIN,ADMIN', EnsureCatalogAccess::class.':admin'])->prefix('admin/catalog/releases')->group(function () {
+Route::middleware(['auth:api', 'permission:catalog.view', EnsureCatalogAccess::class.':admin'])->prefix('admin/catalog/releases')->group(function () {
     Route::get('/', [AdminCatalogController::class, 'index']);
     Route::prefix('{release}')->whereUuid('release')->group(function () {
         Route::get('/', [AdminCatalogController::class, 'show']);
-        Route::post('/status', [AdminCatalogController::class, 'transition']);
-        Route::patch('/assignment', [AdminCatalogController::class, 'assign']);
-        Route::post('/notes', [AdminCatalogController::class, 'note']);
-        Route::put('/distribution', [AdminCatalogController::class, 'distribution']);
-        Route::put('/stores/{store}', [AdminCatalogController::class, 'delivery']);
+        Route::post('/status', [AdminCatalogController::class, 'transition'])->middleware('permission:catalog.manage');
+        Route::patch('/assignment', [AdminCatalogController::class, 'assign'])->middleware('permission:catalog.manage');
+        Route::post('/notes', [AdminCatalogController::class, 'note'])->middleware('permission:catalog.manage');
+        Route::put('/distribution', [AdminCatalogController::class, 'distribution'])->middleware('permission:catalog.manage');
+        Route::put('/stores/{store}', [AdminCatalogController::class, 'delivery'])->middleware('permission:catalog.manage');
         Route::get('/assets/{asset}', [AdminCatalogController::class, 'download'])->whereUuid('asset');
         Route::get('/submissions/{version}', [AdminCatalogController::class, 'submission'])->whereNumber('version');
         Route::get('/submissions/{version}/export', [AdminCatalogController::class, 'export'])->whereNumber('version')->middleware('throttle:catalog-export');
     });
 });
 
-Route::middleware(['auth:api', 'role:SUPER_ADMIN,ADMIN', EnsureCatalogAccess::class.':admin'])->prefix('admin/catalog')->group(function () {
+Route::middleware(['auth:api', 'permission:catalog.view', EnsureCatalogAccess::class.':admin'])->prefix('admin/catalog')->group(function () {
     Route::get('/{masterType}', [CatalogMasterDataController::class, 'adminIndex'])->where('masterType', 'genres|languages|territories|timezones|dsps');
-    Route::post('/dsps/{code}/logo', [CatalogMasterDataController::class, 'uploadDspLogo'])->where('code', '[a-z0-9_-]+');
-    Route::post('/{masterType}', [CatalogMasterDataController::class, 'store'])->where('masterType', 'genres|languages|territories|timezones|dsps');
-    Route::patch('/{masterType}/{code}', [CatalogMasterDataController::class, 'update'])->where('masterType', 'genres|languages|territories|timezones|dsps')->where('code', '.+');
+    Route::post('/dsps/{code}/logo', [CatalogMasterDataController::class, 'uploadDspLogo'])->where('code', '[a-z0-9_-]+')->middleware('permission:catalog_masters.manage');
+    Route::post('/{masterType}', [CatalogMasterDataController::class, 'store'])->where('masterType', 'genres|languages|territories|timezones|dsps')->middleware('permission:catalog_masters.manage');
+    Route::patch('/{masterType}/{code}', [CatalogMasterDataController::class, 'update'])->where('masterType', 'genres|languages|territories|timezones|dsps')->where('code', '.+')->middleware('permission:catalog_masters.manage');
 });
