@@ -10,6 +10,7 @@ use App\Models\Ticket;
 use App\Repositories\Contracts\EventRepositoryInterface;
 use App\Repositories\Contracts\OrderRepositoryInterface;
 use App\Repositories\Contracts\TicketRepositoryInterface;
+use App\Repositories\Contracts\WebhookDeliveryRepositoryInterface;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -22,6 +23,7 @@ class OrderService
         private readonly OrderRepositoryInterface  $orders,
         private readonly TicketRepositoryInterface $tickets,
         private readonly EventRepositoryInterface  $events,
+        private readonly WebhookDeliveryRepositoryInterface $deliveries,
     ) {}
 
     public function listByBuyer(int $buyerId, int $perPage): LengthAwarePaginator
@@ -276,7 +278,15 @@ class OrderService
             throw new RuntimeException('Order not found.');
         }
 
-        return $order->load(['event', 'buyer', 'agent', 'payments', 'items.tickets']);
+        $order->load(['event', 'buyer', 'agent', 'payments', 'items.tickets']);
+
+        // Deliveries hang off the payment reference rather than a foreign key, so they are attached
+        // as a relation here. Set as a relation, not an attribute, so a later save() cannot write it.
+        $order->setRelation('webhookDeliveries', $this->deliveries->forReferenceIds(
+            $order->payments->pluck('reference_id')->filter()->values()->all()
+        ));
+
+        return $order;
     }
 
     /**

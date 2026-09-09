@@ -7,6 +7,8 @@ use App\Models\WebhookDelivery;
 
 interface WebhookDeliveryRepositoryInterface
 {
+    public function forReferenceIds(array $referenceIds): \Illuminate\Support\Collection;
+
     public function record(array $data): WebhookDelivery;
 
     /** Closes out a delivery with the outcome of dispatching it. */

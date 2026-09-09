@@ -6,12 +6,15 @@ use App\Enums\OrderStatus;
 use App\Enums\PaymentProvider;
 use App\Enums\PaymentStatus;
 use App\Enums\PaymentType;
+use App\Enums\WebhookDeliveryStatus;
 use App\Models\Event;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\TicketType;
+use App\Models\WebhookDelivery;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class AdminOrderConsoleTest extends TestCase
@@ -192,5 +195,47 @@ class AdminOrderConsoleTest extends TestCase
 
         $this->actingAs($this->admin, 'api')->getJson('/api/admin/orders?buyer_uid=U000002')->assertOk()
             ->assertJsonCount(1, 'data')->assertJsonPath('data.0.order_number', 'ORD0002');
+    }
+
+    public function test_it_reports_the_callbacks_recorded_against_an_order(): void
+    {
+        $order = $this->order('ORD0001', OrderStatus::Paid, ['paid_at' => now()]);
+        Payment::create([
+            'order_id' => $order->id, 'reference_id' => 'REF-001', 'provider' => PaymentProvider::Xendit,
+            'method_code' => 'qris', 'type' => PaymentType::Qris, 'status' => PaymentStatus::Paid, 'amount' => 300000, 'paid_at' => now(),
+        ]);
+
+        WebhookDelivery::create([
+            'id' => (string) Str::uuid(), 'provider' => PaymentProvider::Xendit, 'event_type' => 'payment.succeeded',
+            'reference_id' => 'REF-001', 'status' => WebhookDeliveryStatus::Applied, 'payload' => ['ok' => true], 'processed_at' => now(),
+        ]);
+        WebhookDelivery::create([
+            'id' => (string) Str::uuid(), 'provider' => PaymentProvider::Xendit, 'event_type' => 'payment.succeeded',
+            'reference_id' => 'REF-001', 'status' => WebhookDeliveryStatus::Failed, 'payload' => ['ok' => false], 'error' => 'boom',
+        ]);
+        // Belongs to a different payment entirely and must not leak into this order.
+        WebhookDelivery::create([
+            'id' => (string) Str::uuid(), 'provider' => PaymentProvider::Xendit, 'event_type' => 'payment.succeeded',
+            'reference_id' => 'REF-OTHER', 'status' => WebhookDeliveryStatus::Applied, 'payload' => [],
+        ]);
+
+        $this->actingAs($this->admin, 'api')->getJson('/api/admin/orders/ORD0001')->assertOk()
+            ->assertJsonCount(2, 'data.callbacks')
+            ->assertJsonPath('data.callbacks.0.status', 'applied')
+            ->assertJsonPath('data.callbacks.0.event_type', 'payment.succeeded')
+            ->assertJsonPath('data.callbacks.1.status', 'failed')
+            ->assertJsonPath('data.callbacks.1.error', 'boom');
+    }
+
+    public function test_it_reports_no_callbacks_when_none_arrived(): void
+    {
+        $order = $this->order('ORD0002', OrderStatus::PendingPayment);
+        Payment::create([
+            'order_id' => $order->id, 'reference_id' => 'REF-002', 'provider' => PaymentProvider::Xendit,
+            'method_code' => 'qris', 'type' => PaymentType::Qris, 'status' => PaymentStatus::Pending, 'amount' => 300000,
+        ]);
+
+        $this->actingAs($this->admin, 'api')->getJson('/api/admin/orders/ORD0002')->assertOk()
+            ->assertJsonCount(0, 'data.callbacks');
     }
 }

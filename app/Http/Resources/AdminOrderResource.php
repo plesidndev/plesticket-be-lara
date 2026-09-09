@@ -42,6 +42,16 @@ class AdminOrderResource extends JsonResource
                 'paid_at' => $payment->paid_at?->toISOString(),
                 'created_at' => $payment->created_at->toISOString(),
             ])),
+            'callbacks' => $this->whenLoaded('webhookDeliveries', fn () => $this->webhookDeliveries->map(fn ($delivery) => [
+                'id' => $delivery->id,
+                'provider' => $delivery->provider->value,
+                'event_type' => $delivery->event_type,
+                'reference_id' => $delivery->reference_id,
+                'status' => $delivery->status->value,
+                'error' => $delivery->error,
+                'processed_at' => $delivery->processed_at?->toISOString(),
+                'created_at' => $delivery->created_at->toISOString(),
+            ])),
             'items' => $this->whenLoaded('items', fn () => $this->items->map(fn ($item) => [
                 'ticket_type_name' => $item->ticket_type_name,
                 'unit_price' => (float) $item->unit_price,
