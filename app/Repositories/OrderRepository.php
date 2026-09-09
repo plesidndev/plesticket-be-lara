@@ -201,6 +201,90 @@ class OrderRepository implements OrderRepositoryInterface
      * a safety net rather than a routine path. It is still required: `order_number` is unique, and
      * without it a collision would surface as a failed checkout that nobody could reproduce.
      */
+    /**
+     * How one event is performing.
+     *
+     * `ticket_types.quota` holds what is *left*, not the original capacity: it is decremented when
+     * an order is placed and restored when that order is cancelled or expires. Capacity is therefore
+     * derived as remaining + the quantities still holding quota, which is exactly the pending and
+     * paid orders. Cancelled and expired orders have already given their seats back and must not
+     * be counted, or capacity would inflate every time somebody abandoned a checkout.
+     *
+     * @return array{ticket_types: list<array<string, mixed>>, totals: array<string, mixed>}
+     */
+    public function eventPerformance(string $eventId): array
+    {
+        $holdingStatuses = ['pending_payment', 'paid'];
+
+        $perType = DB::table('ticket_types')
+            ->where('ticket_types.event_id', $eventId)
+            ->leftJoin('order_items', 'order_items.ticket_type_id', '=', 'ticket_types.id')
+            ->leftJoin('orders', 'orders.id', '=', 'order_items.order_id')
+            ->select(
+                'ticket_types.id',
+                'ticket_types.name',
+                'ticket_types.price',
+                'ticket_types.quota',
+                DB::raw("COALESCE(SUM(CASE WHEN orders.status = 'paid' THEN order_items.quantity ELSE 0 END), 0) as sold"),
+                DB::raw("COALESCE(SUM(CASE WHEN orders.status = 'pending_payment' THEN order_items.quantity ELSE 0 END), 0) as held"),
+                DB::raw("COALESCE(SUM(CASE WHEN orders.status = 'paid' THEN order_items.subtotal ELSE 0 END), 0) as revenue"),
+            )
+            ->groupBy('ticket_types.id', 'ticket_types.name', 'ticket_types.price', 'ticket_types.quota')
+            ->orderBy('ticket_types.id')
+            ->get()
+            ->map(fn ($row) => [
+                'id' => (int) $row->id,
+                'name' => $row->name,
+                'price' => (float) $row->price,
+                'remaining' => (int) $row->quota,
+                'sold' => (int) $row->sold,
+                'held' => (int) $row->held,
+                'capacity' => (int) $row->quota + (int) $row->sold + (int) $row->held,
+                'revenue' => (float) $row->revenue,
+            ])
+            ->all();
+
+        $orders = DB::table('orders')
+            ->where('event_id', $eventId)
+            ->selectRaw('status, COUNT(*) as orders, COALESCE(SUM(total_price), 0) as revenue')
+            ->groupBy('status')
+            ->get()
+            ->keyBy('status');
+
+        $tickets = DB::table('tickets')
+            ->where('event_id', $eventId)
+            ->selectRaw('COUNT(*) as issued, COUNT(scanned_at) as scanned')
+            ->first();
+
+        $refunds = DB::table('payments')
+            ->join('orders', 'orders.id', '=', 'payments.order_id')
+            ->where('orders.event_id', $eventId)
+            ->where('payments.requires_refund', true)
+            ->count();
+
+        $issued = (int) ($tickets->issued ?? 0);
+        $scanned = (int) ($tickets->scanned ?? 0);
+
+        return [
+            'ticket_types' => $perType,
+            'totals' => [
+                'capacity' => array_sum(array_column($perType, 'capacity')),
+                'sold' => array_sum(array_column($perType, 'sold')),
+                'held' => array_sum(array_column($perType, 'held')),
+                'remaining' => array_sum(array_column($perType, 'remaining')),
+                'gross_revenue' => (float) ($orders['paid']->revenue ?? 0),
+                'orders_paid' => (int) ($orders['paid']->orders ?? 0),
+                'orders_pending' => (int) ($orders['pending_payment']->orders ?? 0),
+                'orders_cancelled' => (int) ($orders['cancelled']->orders ?? 0),
+                'orders_expired' => (int) ($orders['expired']->orders ?? 0),
+                'refunds_flagged' => $refunds,
+                'tickets_issued' => $issued,
+                'tickets_scanned' => $scanned,
+                'check_in_rate' => $issued > 0 ? round($scanned / $issued * 100, 1) : 0.0,
+            ],
+        ];
+    }
+
     public function create(array $data): Order
     {
         for ($attempt = 1; ; $attempt++) {

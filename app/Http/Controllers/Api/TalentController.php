@@ -7,6 +7,7 @@ use App\Http\Requests\Talent\CreateTalentRequest;
 use App\Http\Requests\Talent\UpdateTalentRequest;
 use App\Http\Resources\TalentResource;
 use App\Services\TalentService;
+use App\Services\AuditLogger;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class TalentController extends Controller
 {
     use ApiResponse;
 
-    public function __construct(private readonly TalentService $service) {}
+    public function __construct(private readonly TalentService $service, private readonly AuditLogger $audit) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -109,6 +110,8 @@ class TalentController extends Controller
         } catch (InvalidArgumentException $e) {
             return $this->error($e->getMessage(), 422);
         }
+
+        $this->audit->record('talent.verified', 'talent', (string) $talent->id, $talent->name);
 
         return $this->success('Talent verified.', new TalentResource($talent));
     }

@@ -66,6 +66,12 @@ class User extends Authenticatable implements JWTSubject
         return $this->hasMany(UserPermission::class);
     }
 
+    /** Events this account organizes. */
+    public function events(): HasMany
+    {
+        return $this->hasMany(Event::class);
+    }
+
     /**
      * The grants held by this account.
      *

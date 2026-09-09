@@ -55,6 +55,12 @@ class UserService
         return $user->load('permissions');
     }
 
+    /** @param array<string, mixed> $filters */
+    public function listOrganizers(int $perPage = 15, array $filters = []): LengthAwarePaginator
+    {
+        return $this->users->paginateOrganizers($perPage, $filters);
+    }
+
     public function findByUid(string $uid): User
     {
         $user = $this->users->findByUid($uid);

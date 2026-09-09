@@ -7,6 +7,7 @@ use App\Http\Requests\Category\CreateCategoryRequest;
 use App\Http\Requests\Category\UpdateCategoryRequest;
 use App\Http\Resources\CategoryResource;
 use App\Services\CategoryService;
+use App\Services\AuditLogger;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ class CategoryController extends Controller
 {
     use ApiResponse;
 
-    public function __construct(private readonly CategoryService $service) {}
+    public function __construct(private readonly CategoryService $service, private readonly AuditLogger $audit) {}
 
     // Public — active categories for dropdowns
     public function index(): JsonResponse
@@ -43,6 +44,8 @@ class CategoryController extends Controller
             return $this->error($e->getMessage(), 422);
         }
 
+        $this->audit->record('category.created', 'category', (string) $category->id, $category->name);
+
         return $this->created('Category created.', new CategoryResource($category));
     }
 
@@ -57,6 +60,8 @@ class CategoryController extends Controller
             return $this->error($e->getMessage(), 422);
         }
 
+        $this->audit->record('category.updated', 'category', (string) $category->id, $category->name, $request->validated());
+
         return $this->success('Category updated.', new CategoryResource($category));
     }
 
@@ -68,6 +73,8 @@ class CategoryController extends Controller
         } catch (RuntimeException $e) {
             return $this->error($e->getMessage(), 404);
         }
+
+        $this->audit->record('category.deleted', 'category', (string) $id);
 
         return $this->success('Category deleted.');
     }

@@ -4,6 +4,8 @@ use App\Http\Controllers\Api\AdminCatalogController;
 use App\Http\Controllers\Api\AdminOperationsController;
 use App\Http\Controllers\Api\AdminOrderController;
 use App\Http\Controllers\Api\AdminSummaryController;
+use App\Http\Controllers\Api\AuditLogController;
+use App\Http\Controllers\Api\PayoutController;
 use App\Http\Controllers\Api\AgentEventController;
 use App\Http\Controllers\Api\AgentOrderController;
 use App\Http\Controllers\Api\AgentSummaryController;
@@ -89,8 +91,19 @@ Route::get('/payment-methods', [PaymentController::class, 'methods']);
 // Admin console — gated per capability, not per role. A SUPER_ADMIN passes everything.
 Route::middleware(['auth:api', 'permission:console.access'])->prefix('admin')->group(function () {
     Route::get('/summary', AdminSummaryController::class)->middleware('permission:summary.view');
+    Route::get('/payouts', [PayoutController::class, 'index'])->middleware('permission:payouts.view');
+    Route::post('/payouts/preview', [PayoutController::class, 'preview'])->middleware('permission:payouts.manage');
+    Route::post('/payouts', [PayoutController::class, 'store'])->middleware('permission:payouts.manage');
+    Route::post('/payouts/cancel', [PayoutController::class, 'cancel'])->middleware('permission:payouts.manage');
+    Route::get('/payouts/{id}', [PayoutController::class, 'show'])->middleware('permission:payouts.view');
+    Route::post('/payouts/{id}/approve', [PayoutController::class, 'approve'])->middleware('permission:payouts.manage');
+    Route::post('/payouts/{id}/pay', [PayoutController::class, 'markPaid'])->middleware('permission:payouts.manage');
+    Route::get('/audit-logs', [AuditLogController::class, 'index'])->middleware('permission:audit.view');
+    Route::get('/audit-logs/actions', [AuditLogController::class, 'actions'])->middleware('permission:audit.view');
     Route::get('/operations/refunds', [AdminOperationsController::class, 'refunds'])->middleware('permission:operations.view');
     Route::get('/operations/webhooks', [AdminOperationsController::class, 'webhooks'])->middleware('permission:operations.view');
+    Route::get('/operations/webhook-log', [AdminOperationsController::class, 'webhookLog'])->middleware('permission:operations.view');
+    Route::post('/operations/webhook-log/{id}/replay', [AdminOperationsController::class, 'replayWebhook'])->middleware('permission:operations.manage');
     Route::get('/orders', [AdminOrderController::class, 'index'])->middleware('permission:orders.view');
     Route::get('/orders/{orderNumber}', [AdminOrderController::class, 'show'])->middleware('permission:orders.view');
     Route::post('/orders/{orderNumber}/cancel', [AdminOrderController::class, 'cancel'])->middleware('permission:orders.manage');
@@ -103,6 +116,8 @@ Route::middleware(['auth:api', 'permission:console.access'])->prefix('admin')->g
 
 // Reading the directory needs users.view; whether staff accounts are included is a second
 // grant (users.view_staff), enforced in the controller so a hand-written ?role= cannot widen it.
+Route::middleware(['auth:api', 'permission:organizers.view'])->get('/organizers', [UserController::class, 'organizers']);
+
 Route::middleware(['auth:api', 'permission:users.view'])->prefix('users')->group(function () {
     Route::get('/', [UserController::class, 'index']);
     Route::get('/{uid}', [UserController::class, 'show']);
@@ -129,6 +144,8 @@ Route::middleware(['auth:api', 'eo'])->group(function () {
     Route::put('/events/{id}', [EventController::class, 'update']);
     Route::post('/events/{id}/banner', [EventController::class, 'uploadBanner']);
     Route::patch('/events/{id}/toggle', [EventController::class, 'toggleActive']);
+    Route::get('/events/{id}/performance', [EventController::class, 'myPerformance']);
+    Route::get('/payouts/mine', [PayoutController::class, 'mine']);
 });
 
 // Public event by slug (after /my to avoid swallowing it)
@@ -138,6 +155,7 @@ Route::get('/events/{slug}', [EventController::class, 'showBySlug']);
 Route::middleware(['auth:api', 'permission:console.access'])->prefix('admin')->group(function () {
     Route::get('/events', [EventController::class, 'adminIndex'])->middleware('permission:events.view');
     Route::get('/events/{id}', [EventController::class, 'adminShow'])->middleware('permission:events.view');
+    Route::get('/events/{id}/performance', [EventController::class, 'adminPerformance'])->middleware('permission:events.view');
     Route::post('/events/{id}/verify', [EventController::class, 'verify'])->middleware('permission:events.moderate');
     Route::post('/events/{id}/reject', [EventController::class, 'reject'])->middleware('permission:events.moderate');
     Route::post('/events/{id}/suspend', [EventController::class, 'suspend'])->middleware('permission:events.moderate');

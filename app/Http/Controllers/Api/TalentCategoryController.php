@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Talent\SaveTalentCategoryRequest;
 use App\Http\Resources\TalentCategoryResource;
 use App\Services\TalentCategoryService;
+use App\Services\AuditLogger;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 
@@ -13,7 +14,7 @@ class TalentCategoryController extends Controller
 {
     use ApiResponse;
 
-    public function __construct(private readonly TalentCategoryService $categories) {}
+    public function __construct(private readonly TalentCategoryService $categories, private readonly AuditLogger $audit) {}
 
     public function index(): JsonResponse
     {
@@ -27,11 +28,17 @@ class TalentCategoryController extends Controller
 
     public function store(SaveTalentCategoryRequest $request): JsonResponse
     {
-        return $this->created('Talent category created.', new TalentCategoryResource($this->categories->save($request->validated())));
+        $category = $this->categories->save($request->validated());
+        $this->audit->record('talent_category.created', 'talent_category', (string) $category->code, $category->name);
+
+        return $this->created('Talent category created.', new TalentCategoryResource($category));
     }
 
     public function update(SaveTalentCategoryRequest $request, string $code): JsonResponse
     {
-        return $this->success('Talent category updated.', new TalentCategoryResource($this->categories->save($request->validated(), $code)));
+        $category = $this->categories->save($request->validated(), $code);
+        $this->audit->record('talent_category.updated', 'talent_category', (string) $code, $category->name, $request->validated());
+
+        return $this->success('Talent category updated.', new TalentCategoryResource($category));
     }
 }

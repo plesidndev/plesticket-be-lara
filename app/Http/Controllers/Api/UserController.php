@@ -7,7 +7,9 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\CreateUserRequest;
 use App\Http\Requests\User\UpdateUserRequest;
+use App\Http\Resources\OrganizerResource;
 use App\Http\Resources\UserResource;
+use App\Services\AuditLogger;
 use App\Services\UserService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -18,7 +20,7 @@ class UserController extends Controller
 {
     use ApiResponse;
 
-    public function __construct(private readonly UserService $service) {}
+    public function __construct(private readonly UserService $service, private readonly AuditLogger $audit) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -44,7 +46,23 @@ class UserController extends Controller
     {
         $user = $this->service->createAdmin($request->validated());
 
+        $this->audit->record('user.created', 'user', $user->uid, $user->name, ['role' => $user->role->value, 'email' => $user->email]);
+
         return $this->created('Admin user created.', new UserResource($user));
+    }
+
+    // SUPER_ADMIN — accounts flagged as organizers, with their event counts
+    public function organizers(Request $request): JsonResponse
+    {
+        $filters = $request->only(['search']);
+
+        if ($request->filled('is_active')) {
+            $filters['is_active'] = $request->boolean('is_active');
+        }
+
+        $paginator = $this->service->listOrganizers((int) $request->query('limit', 15), $filters);
+
+        return $this->paginated('Organizers retrieved.', OrganizerResource::collection($paginator), $paginator);
     }
 
     public function show(Request $request, string $uid): JsonResponse
@@ -72,9 +90,23 @@ class UserController extends Controller
     public function update(UpdateUserRequest $request, string $uid): JsonResponse
     {
         try {
+            $before = $this->service->findByUid($uid);
+            $snapshot = ['name' => $before->name, 'email' => $before->email, 'role' => $before->role->value, 'is_active' => $before->is_active];
             $user = $this->service->update($uid, $request->validated());
         } catch (RuntimeException $exception) {
             return $this->error($exception->getMessage(), 404);
+        }
+
+        $after = ['name' => $user->name, 'email' => $user->email, 'role' => $user->role->value, 'is_active' => $user->is_active];
+        // Only what actually moved is stored, so a rename does not read like a role change.
+        $changed = array_keys(array_diff_assoc($after, $snapshot));
+
+        if ($changed !== [] || $request->filled('password')) {
+            $this->audit->record('user.updated', 'user', $user->uid, $user->name, [
+                'fields' => $request->filled('password') ? [...$changed, 'password'] : $changed,
+                'before' => array_intersect_key($snapshot, array_flip($changed)),
+                'after' => array_intersect_key($after, array_flip($changed)),
+            ]);
         }
 
         return $this->success('User updated.', new UserResource($user));
@@ -83,10 +115,15 @@ class UserController extends Controller
     public function destroy(string $uid): JsonResponse
     {
         try {
+            $target = $this->service->findByUid($uid);
+            $label = $target->name;
+            $snapshot = ['email' => $target->email, 'role' => $target->role->value];
             $this->service->delete($uid);
         } catch (RuntimeException $exception) {
             return $this->error($exception->getMessage(), 404);
         }
+
+        $this->audit->record('user.deleted', 'user', $uid, $label, $snapshot);
 
         return $this->success('User deleted.');
     }

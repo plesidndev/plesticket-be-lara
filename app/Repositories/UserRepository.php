@@ -39,6 +39,33 @@ class UserRepository implements UserRepositoryInterface
         return User::where('uid', $uid)->first();
     }
 
+    /**
+     * Accounts flagged as organizers, with how many events each runs.
+     *
+     * `is_organizer` is a flag rather than a role, so these accounts are indistinguishable from
+     * ordinary members in the role-filtered directory — hence a query of their own.
+     */
+    public function paginateOrganizers(int $perPage, array $filters = []): LengthAwarePaginator
+    {
+        $query = User::query()
+            ->where('is_organizer', true)
+            ->withCount('events')
+            ->orderBy('name');
+
+        if (! empty($filters['search'])) {
+            $query->where(function ($scope) use ($filters) {
+                $scope->where('name', 'like', '%'.$filters['search'].'%')
+                    ->orWhere('email', 'like', '%'.$filters['search'].'%');
+            });
+        }
+
+        if (isset($filters['is_active'])) {
+            $query->where('is_active', $filters['is_active']);
+        }
+
+        return $query->paginate($perPage);
+    }
+
     public function paginate(int $perPage, array $filters = []): LengthAwarePaginator
     {
         $query = User::query()->orderBy('id');

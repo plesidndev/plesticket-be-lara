@@ -9,7 +9,7 @@ class TicketRepository implements TicketRepositoryInterface
 {
     public function findByCode(string $code): ?Ticket
     {
-        return Ticket::with(['event', 'ticketType', 'buyer', 'orderItem', 'scannedBy'])
+        return Ticket::with(['event', 'ticketType', 'buyer', 'orderItem', 'scannedBy', 'order'])
             ->where('ticket_code', $code)
             ->first();
     }

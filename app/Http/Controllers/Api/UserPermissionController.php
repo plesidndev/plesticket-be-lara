@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Enums\Permission;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\User\SyncPermissionsRequest;
+use App\Services\AuditLogger;
 use App\Services\UserService;
 use App\Traits\ApiResponse;
 use DomainException;
@@ -16,7 +17,7 @@ class UserPermissionController extends Controller
 {
     use ApiResponse;
 
-    public function __construct(private readonly UserService $service) {}
+    public function __construct(private readonly UserService $service, private readonly AuditLogger $audit) {}
 
     /**
      * The account's grants alongside the full catalog, so an editor can render the grid without
@@ -46,6 +47,8 @@ class UserPermissionController extends Controller
     public function update(SyncPermissionsRequest $request, string $uid): JsonResponse
     {
         try {
+            $before = $this->service->findByUid($uid);
+            $held = $before->permissionCodes();
             $granted = $this->service->syncPermissions($uid, $request->validated('permissions'), $request->user());
         } catch (RuntimeException $exception) {
             return $this->error($exception->getMessage(), 404);
@@ -54,6 +57,11 @@ class UserPermissionController extends Controller
             // refusal against the field it belongs to rather than as a bare banner.
             return $this->error($exception->getMessage(), 422, ['permissions' => [$exception->getMessage()]]);
         }
+
+        $this->audit->record('user.permissions_synced', 'user', $uid, $before->name, [
+            'added' => array_values(array_diff($granted, $held)),
+            'removed' => array_values(array_diff($held, $granted)),
+        ]);
 
         return $this->success('Permissions updated.', ['uid' => $uid, 'granted' => $granted]);
     }

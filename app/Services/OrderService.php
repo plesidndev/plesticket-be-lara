@@ -3,10 +3,12 @@
 namespace App\Services;
 
 use App\Enums\OrderStatus;
+use App\Enums\Permission;
 use App\Enums\TicketStatus;
 use App\Models\Order;
 use App\Models\Payment;
 use App\Models\Ticket;
+use App\Models\User;
 use App\Repositories\Contracts\EventRepositoryInterface;
 use App\Repositories\Contracts\OrderRepositoryInterface;
 use App\Repositories\Contracts\TicketRepositoryInterface;
@@ -270,6 +272,29 @@ class OrderService
         return $this->orders->paginateForConsole($perPage, $filters);
     }
 
+    /** @return array{ticket_types: list<array<string, mixed>>, totals: array<string, mixed>} */
+    public function eventPerformance(string $eventId): array
+    {
+        return $this->orders->eventPerformance($eventId);
+    }
+
+    /**
+     * The same figures for the organizer who owns the event. Someone else's event reads as missing,
+     * matching how the rest of the EO surface refuses events that are not yours.
+     *
+     * @return array{ticket_types: list<array<string, mixed>>, totals: array<string, mixed>}
+     */
+    public function eventPerformanceForOwner(string $eventId, int $userId): array
+    {
+        $event = $this->events->findById($eventId);
+
+        if (! $event || $event->user_id !== $userId) {
+            throw new RuntimeException('Event not found.');
+        }
+
+        return $this->orders->eventPerformance($event->id);
+    }
+
     public function findForConsole(string $orderNumber): Order
     {
         $order = $this->orders->findByOrderNumber($orderNumber);
@@ -335,6 +360,39 @@ class OrderService
         $this->restoreQuotas($order);
 
         return $this->orders->update($order, ['status' => OrderStatus::Cancelled]);
+    }
+
+    /**
+     * A ticket as a given account is allowed to see it: the buyer who holds it, the organizer whose
+     * event issued it, or console staff.
+     *
+     * An account that may not see the ticket gets the same "not found" as a code that does not
+     * exist. Ticket codes are short and appear on printable passes, so a 403 here would confirm a
+     * code is real and let anyone probe for valid ones.
+     */
+    public function getTicketFor(string $code, User $viewer): Ticket
+    {
+        $ticket = $this->getTicket($code);
+
+        if ($this->mayViewTicket($ticket, $viewer)) {
+            return $ticket;
+        }
+
+        throw new RuntimeException('Ticket not found.');
+    }
+
+    private function mayViewTicket(Ticket $ticket, User $viewer): bool
+    {
+        if ($viewer->hasPermission(Permission::ConsoleAccess)) {
+            return true;
+        }
+
+        // Nullable: agent and guest sales carry no buyer, and must not match a null viewer id.
+        if ($ticket->buyer_id !== null && (int) $ticket->buyer_id === (int) $viewer->id) {
+            return true;
+        }
+
+        return $ticket->event !== null && (int) $ticket->event->user_id === (int) $viewer->id;
     }
 
     public function getTicket(string $code): Ticket

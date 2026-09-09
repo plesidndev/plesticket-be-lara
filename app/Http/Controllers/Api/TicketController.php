@@ -16,11 +16,11 @@ class TicketController extends Controller
 
     public function __construct(private readonly OrderService $service) {}
 
-    // Buyer or organizer can look up a ticket by code
+    // The buyer who holds the ticket, the organizer whose event issued it, or console staff.
     public function show(string $code): JsonResponse
     {
         try {
-            $ticket = $this->service->getTicket($code);
+            $ticket = $this->service->getTicketFor($code, auth('api')->user());
         } catch (RuntimeException $e) {
             return $this->error($e->getMessage(), 404);
         }

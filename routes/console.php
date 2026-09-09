@@ -15,3 +15,10 @@ Schedule::command('orders:expire')
     ->everyFiveMinutes()
     ->withoutOverlapping()
     ->runInBackground();
+
+// Trim the webhook audit trail. Settled deliveries only — failed and unmatched are a work queue
+// and are kept until someone resolves them, however old they get.
+Schedule::command('webhooks:prune')
+    ->dailyAt('03:30')
+    ->withoutOverlapping()
+    ->runInBackground();

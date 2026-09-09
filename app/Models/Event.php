@@ -36,6 +36,7 @@ class Event extends Model
         'city',
         'province',
         'verification_status',
+        'platform_fee_percent',
         'rejection_reason',
         'verified_at',
         'verified_by',

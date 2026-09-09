@@ -15,6 +15,7 @@ enum Permission: string
 
     case SummaryView = 'summary.view';
     case OperationsView = 'operations.view';
+    case OperationsManage = 'operations.manage';
 
     case CategoriesView = 'categories.view';
     case CategoriesManage = 'categories.manage';
@@ -29,6 +30,13 @@ enum Permission: string
     case CatalogManage = 'catalog.manage';
     case CatalogMastersManage = 'catalog_masters.manage';
 
+    case PayoutsView = 'payouts.view';
+    case PayoutsManage = 'payouts.manage';
+
+    case AuditView = 'audit.view';
+
+    case OrganizersView = 'organizers.view';
+
     case OrdersView = 'orders.view';
     case OrdersManage = 'orders.manage';
 
@@ -41,11 +49,14 @@ enum Permission: string
     {
         return match ($this) {
             self::ConsoleAccess => 'general',
-            self::SummaryView, self::OperationsView => 'operations',
+            self::SummaryView, self::OperationsView, self::OperationsManage => 'operations',
             self::CategoriesView, self::CategoriesManage => 'categories',
             self::EventsView, self::EventsModerate => 'events',
             self::TalentsView, self::TalentsModerate => 'talents',
             self::CatalogView, self::CatalogManage, self::CatalogMastersManage => 'catalog',
+            self::PayoutsView, self::PayoutsManage => 'payouts',
+            self::AuditView => 'audit',
+            self::OrganizersView => 'organizers',
             self::OrdersView, self::OrdersManage => 'orders',
             self::UsersView, self::UsersViewStaff, self::UsersManage => 'users',
         };
@@ -57,6 +68,7 @@ enum Permission: string
             self::ConsoleAccess => 'Sign in to the admin console',
             self::SummaryView => 'View the dashboard summary',
             self::OperationsView => 'View refunds and webhooks',
+            self::OperationsManage => 'Replay payment callbacks',
             self::CategoriesView => 'View categories',
             self::CategoriesManage => 'Create, edit and delete categories',
             self::EventsView => 'View submitted events',
@@ -66,6 +78,10 @@ enum Permission: string
             self::CatalogView => 'View catalog releases',
             self::CatalogManage => 'Review, assign and distribute releases',
             self::CatalogMastersManage => 'Manage catalog master data',
+            self::PayoutsView => 'View organizer payouts',
+            self::PayoutsManage => 'Create, approve and settle payouts',
+            self::AuditView => 'View the audit log',
+            self::OrganizersView => 'View the organizer directory',
             self::OrdersView => 'View ticket transactions',
             self::OrdersManage => 'Cancel orders and settle refunds',
             self::UsersView => 'View the member directory',

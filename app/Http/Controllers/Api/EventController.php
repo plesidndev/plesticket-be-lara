@@ -7,7 +7,9 @@ use App\Http\Requests\Event\CreateEventRequest;
 use App\Http\Requests\Event\RejectEventRequest;
 use App\Http\Requests\Event\UpdateEventRequest;
 use App\Http\Resources\EventResource;
+use App\Services\AuditLogger;
 use App\Services\EventService;
+use App\Services\OrderService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,7 +20,7 @@ class EventController extends Controller
 {
     use ApiResponse;
 
-    public function __construct(private readonly EventService $service) {}
+    public function __construct(private readonly EventService $service, private readonly AuditLogger $audit) {}
 
     // Public — list verified events
     public function index(Request $request): JsonResponse
@@ -148,6 +150,30 @@ class EventController extends Controller
         return $this->success('Event retrieved.', new EventResource($event));
     }
 
+    // EO — how my own event is selling and checking in
+    public function myPerformance(string $id, OrderService $orders): JsonResponse
+    {
+        try {
+            $performance = $orders->eventPerformanceForOwner($id, auth('api')->id());
+        } catch (RuntimeException $e) {
+            return $this->error($e->getMessage(), 404);
+        }
+
+        return $this->success('Event performance retrieved.', $performance);
+    }
+
+    // SUPER_ADMIN — how the event is selling and checking in
+    public function adminPerformance(string $id, OrderService $orders): JsonResponse
+    {
+        try {
+            $event = $this->service->findById($id);
+        } catch (RuntimeException $e) {
+            return $this->error($e->getMessage(), 404);
+        }
+
+        return $this->success('Event performance retrieved.', $orders->eventPerformance($event->id));
+    }
+
     // SUPER_ADMIN — verify
     public function verify(string $id): JsonResponse
     {
@@ -156,6 +182,8 @@ class EventController extends Controller
         } catch (RuntimeException | InvalidArgumentException $e) {
             return $this->error($e->getMessage(), 422);
         }
+
+        $this->audit->record('event.verified', 'event', $event->event_id, $event->title, ['verification_status' => $event->verification_status->value]);
 
         return $this->success('Event verified.', new EventResource($event));
     }
@@ -169,6 +197,8 @@ class EventController extends Controller
             return $this->error($e->getMessage(), 404);
         }
 
+        $this->audit->record('event.rejected', 'event', $event->event_id, $event->title, ['reason' => $request->validated('reason')]);
+
         return $this->success('Event rejected.', new EventResource($event));
     }
 
@@ -180,6 +210,8 @@ class EventController extends Controller
         } catch (RuntimeException $e) {
             return $this->error($e->getMessage(), 404);
         }
+
+        $this->audit->record('event.suspended', 'event', $event->event_id, $event->title, ['verification_status' => $event->verification_status->value]);
 
         return $this->success('Event suspended.', new EventResource($event));
     }

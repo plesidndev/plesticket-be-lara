@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Http\Resources\AdminOrderResource;
+use App\Services\AuditLogger;
 use App\Services\OrderService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -15,7 +16,7 @@ class AdminOrderController extends Controller
 {
     use ApiResponse;
 
-    public function __construct(private readonly OrderService $service) {}
+    public function __construct(private readonly OrderService $service, private readonly AuditLogger $audit) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -51,6 +52,10 @@ class AdminOrderController extends Controller
             return $this->error($exception->getMessage(), 404);
         }
 
+        $this->audit->record('order.cancelled', 'order', $order->order_number, $order->buyer_name, [
+            'event_id' => $order->event_id, 'total_price' => (float) $order->total_price,
+        ]);
+
         return $this->success('Order cancelled.', new AdminOrderResource($order));
     }
 
@@ -63,6 +68,11 @@ class AdminOrderController extends Controller
         } catch (RuntimeException $exception) {
             return $this->error($exception->getMessage(), 404);
         }
+
+        // Worth recording precisely: settling only clears a flag here, the money moves elsewhere.
+        $this->audit->record('order.refund_settled', 'order', $order->order_number, $order->buyer_name, [
+            'event_id' => $order->event_id, 'total_price' => (float) $order->total_price,
+        ]);
 
         return $this->success('Refund marked as settled.', new AdminOrderResource($order));
     }
