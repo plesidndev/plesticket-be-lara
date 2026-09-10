@@ -15,7 +15,8 @@ class Payout extends Model
     protected $fillable = [
         'reference', 'organizer_id', 'period_start', 'period_end',
         'gross_amount', 'platform_fee_amount', 'agent_commission_amount', 'net_amount',
-        'status', 'bank_reference', 'note', 'approved_by', 'approved_at', 'paid_by', 'paid_at',
+        'status', 'source', 'requested_at', 'bank_name', 'account_number', 'account_holder',
+        'bank_reference', 'note', 'approved_by', 'approved_at', 'paid_by', 'paid_at',
     ];
 
     protected function casts(): array
@@ -28,6 +29,7 @@ class Payout extends Model
             'platform_fee_amount' => 'decimal:2',
             'agent_commission_amount' => 'decimal:2',
             'net_amount' => 'decimal:2',
+            'requested_at' => 'datetime',
             'approved_at' => 'datetime',
             'paid_at' => 'datetime',
         ];

@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AdminOperationsController;
 use App\Http\Controllers\Api\AdminOrderController;
 use App\Http\Controllers\Api\AdminSummaryController;
 use App\Http\Controllers\Api\AuditLogController;
+use App\Http\Controllers\Api\PayoutAccountController;
 use App\Http\Controllers\Api\PayoutController;
 use App\Http\Controllers\Api\AgentEventController;
 use App\Http\Controllers\Api\AgentOrderController;
@@ -146,6 +147,10 @@ Route::middleware(['auth:api', 'eo'])->group(function () {
     Route::patch('/events/{id}/toggle', [EventController::class, 'toggleActive']);
     Route::get('/events/{id}/performance', [EventController::class, 'myPerformance']);
     Route::get('/payouts/mine', [PayoutController::class, 'mine']);
+    Route::get('/payouts/balance', [PayoutController::class, 'balance']);
+    Route::post('/payouts/request', [PayoutController::class, 'requestWithdrawal']);
+    Route::get('/payout-account', [PayoutAccountController::class, 'show']);
+    Route::put('/payout-account', [PayoutAccountController::class, 'update']);
 });
 
 // Public event by slug (after /my to avoid swallowing it)

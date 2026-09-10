@@ -47,6 +47,27 @@ class PayoutController extends Controller
         return $this->paginated('Payouts retrieved.', PayoutResource::collection($paginator), $paginator);
     }
 
+    /** What the caller could withdraw right now, and whether they may ask for it. */
+    public function balance(): JsonResponse
+    {
+        return $this->success('Balance retrieved.', $this->service->balanceFor(auth('api')->id()));
+    }
+
+    public function requestWithdrawal(): JsonResponse
+    {
+        try {
+            $payout = $this->service->requestWithdrawal(auth('api')->id());
+        } catch (InvalidArgumentException $e) {
+            return $this->error($e->getMessage(), 422, ['payout' => [$e->getMessage()]]);
+        }
+
+        $this->audit->record('payout.requested', 'payout', $payout->reference, $payout->organizer?->name, [
+            'net_amount' => (float) $payout->net_amount,
+        ]);
+
+        return $this->created('Withdrawal requested.', new PayoutResource($payout));
+    }
+
     public function show(string $id): JsonResponse
     {
         try {

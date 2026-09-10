@@ -18,4 +18,15 @@ return [
 
     'fee_percent' => (float) env('PLATFORM_FEE_PERCENT', 5),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Minimum payout
+    |--------------------------------------------------------------------------
+    |
+    | The smallest net amount an organizer may request. Zero means no minimum.
+    |
+    */
+
+    'minimum_payout' => (float) env('PLATFORM_MINIMUM_PAYOUT', 0),
+
 ];

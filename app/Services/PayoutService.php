@@ -6,6 +6,7 @@ use App\Enums\OrderStatus;
 use App\Enums\PayoutStatus;
 use App\Models\Order;
 use App\Models\Payout;
+use App\Models\PayoutAccount;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -96,6 +97,80 @@ class PayoutService
         ];
     }
 
+    /**
+     * What an organizer could be paid right now: every eligible order not yet on a payout, with no
+     * date window. This is the same calculation a payout uses, so the figure they see is the figure
+     * they would receive.
+     *
+     * @return array{totals: array<string, float|int>, minimum: float, can_request: bool, blocked_reason: ?string}
+     */
+    public function balanceFor(int $organizerId): array
+    {
+        $preview = $this->preview($organizerId, '1970-01-01', now()->toDateString());
+        $totals = $preview['totals'];
+        $minimum = (float) config('platform.minimum_payout');
+
+        return [
+            'totals' => $totals,
+            'minimum' => $minimum,
+            'can_request' => $this->blockedReason($organizerId, (float) $totals['net_amount'], $minimum) === null,
+            'blocked_reason' => $this->blockedReason($organizerId, (float) $totals['net_amount'], $minimum),
+        ];
+    }
+
+    /**
+     * Why a withdrawal cannot be requested, or null if it can. Kept in one place so the button state
+     * and the endpoint's refusal can never disagree.
+     */
+    private function blockedReason(int $organizerId, float $net, float $minimum): ?string
+    {
+        if ($net <= 0) {
+            return 'There is nothing available to withdraw.';
+        }
+
+        if ($minimum > 0 && $net < $minimum) {
+            return 'The minimum withdrawal is '.number_format($minimum, 0, ',', '.').'.';
+        }
+
+        if (! PayoutAccount::where('user_id', $organizerId)->exists()) {
+            return 'Add your bank account before requesting a withdrawal.';
+        }
+
+        if (Payout::where('organizer_id', $organizerId)->whereIn('status', [PayoutStatus::Pending, PayoutStatus::Approved])->exists()) {
+            return 'You already have a withdrawal in progress.';
+        }
+
+        return null;
+    }
+
+    /**
+     * An organizer asking to be paid. This creates the same payout record an admin would, marked as
+     * organizer-originated, so the approve → pay workflow is unchanged from here.
+     */
+    public function requestWithdrawal(int $organizerId): Payout
+    {
+        $balance = $this->balanceFor($organizerId);
+
+        if ($balance['blocked_reason'] !== null) {
+            throw new InvalidArgumentException($balance['blocked_reason']);
+        }
+
+        $account = PayoutAccount::where('user_id', $organizerId)->firstOrFail();
+
+        $payout = $this->create($organizerId, '1970-01-01', now()->toDateString());
+
+        $payout->update([
+            'source' => 'organizer',
+            'requested_at' => now(),
+            // Snapshotted so editing the account later cannot rewrite where this money was sent.
+            'bank_name' => $account->bank_name,
+            'account_number' => $account->account_number,
+            'account_holder' => $account->account_holder,
+        ]);
+
+        return $payout->fresh('lines');
+    }
+
     public function create(int $organizerId, string $from, string $to): Payout
     {
         $organizer = User::find($organizerId);
@@ -122,6 +197,14 @@ class PayoutService
                 'net_amount' => $preview['totals']['net_amount'],
                 'status' => PayoutStatus::Pending,
             ]);
+
+            if ($account = PayoutAccount::where('user_id', $organizer->id)->first()) {
+                $payout->update([
+                    'bank_name' => $account->bank_name,
+                    'account_number' => $account->account_number,
+                    'account_holder' => $account->account_holder,
+                ]);
+            }
 
             foreach ($preview['lines'] as $line) {
                 $payout->lines()->create([
