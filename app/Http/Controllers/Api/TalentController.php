@@ -2,12 +2,14 @@
 
 namespace App\Http\Controllers\Api;
 
+use App\Exceptions\IdempotentRequestInFlight;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Talent\CreateTalentRequest;
 use App\Http\Requests\Talent\UpdateTalentRequest;
 use App\Http\Resources\TalentResource;
-use App\Services\TalentService;
 use App\Services\AuditLogger;
+use App\Services\IdempotencyGuard;
+use App\Services\TalentService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,7 +20,9 @@ class TalentController extends Controller
 {
     use ApiResponse;
 
-    public function __construct(private readonly TalentService $service, private readonly AuditLogger $audit) {}
+    private const CREATE_SCOPE = 'talents.create';
+
+    public function __construct(private readonly TalentService $service, private readonly AuditLogger $audit, private readonly IdempotencyGuard $idempotency) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -41,9 +45,41 @@ class TalentController extends Controller
         return $this->paginated('My talents retrieved.', TalentResource::collection($paginator), $paginator);
     }
 
+    /**
+     * A creator watching a slow save presses Create again, and both presses used to become their
+     * own talent. Sending the same Idempotency-Key with each attempt collapses them into one.
+     * The header is optional, so callers that do not send it keep the previous behaviour.
+     */
     public function store(CreateTalentRequest $request): JsonResponse
     {
-        $talent = $this->service->create(auth('api')->id(), $request->validated());
+        $userId = auth('api')->id();
+        $key = trim((string) $request->header('Idempotency-Key'));
+
+        if ($key === '') {
+            return $this->created('Talent created.', new TalentResource($this->service->create($userId, $request->validated())));
+        }
+        if (mb_strlen($key) > 100) {
+            return $this->error('Idempotency-Key must be 100 characters or fewer.', 422);
+        }
+
+        try {
+            $existingId = $this->idempotency->claim(self::CREATE_SCOPE, $userId, $key);
+        } catch (IdempotentRequestInFlight) {
+            return $this->error('An identical request is still being processed.', 409);
+        }
+
+        if ($existingId !== null) {
+            return $this->success('Talent already created.', new TalentResource($this->service->findOrFail($existingId)));
+        }
+
+        try {
+            $talent = $this->service->create($userId, $request->validated());
+        } catch (\Throwable $error) {
+            $this->idempotency->release(self::CREATE_SCOPE, $userId, $key);
+
+            throw $error;
+        }
+        $this->idempotency->complete(self::CREATE_SCOPE, $userId, $key, $talent->id);
 
         return $this->created('Talent created.', new TalentResource($talent));
     }
