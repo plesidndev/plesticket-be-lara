@@ -400,6 +400,28 @@ class CatalogApiTest extends TestCase
         $this->actingAs($this->artist, 'api')->getJson('/api/catalog/dsps')->assertOk()->assertJsonFragment(['logo_url' => Storage::disk('public')->url($new)]);
     }
 
+    public function test_labels_suggest_admin_curated_names_without_constraining_a_release(): void
+    {
+        $this->actingAs($this->admin, 'api')->postJson('/api/admin/catalog/labels', ['code' => 'ples_music', 'name' => 'Ples Music'])->assertCreated();
+        $this->postJson('/api/admin/catalog/labels', ['code' => 'retired_imprint', 'name' => 'Retired Imprint', 'is_active' => false])->assertCreated();
+
+        $this->actingAs($this->artist, 'api')->getJson('/api/catalog/options')->assertOk()
+            ->assertJsonFragment(['code' => 'ples_music', 'name' => 'Ples Music', 'is_active' => true, 'sort_order' => 0])
+            ->assertJsonMissing(['code' => 'retired_imprint']);
+        $this->getJson('/api/catalog/labels')->assertOk()->assertJsonFragment(['code' => 'ples_music'])->assertJsonMissing(['code' => 'retired_imprint']);
+
+        // The point of the list is suggestion, not restriction: an artist on their own imprint must
+        // still be able to type a label nobody has registered, unlike a genre or a language.
+        $id = $this->draft(['label' => 'My Own Imprint'])['id'];
+        $this->getJson("/api/catalog/releases/$id")->assertOk()->assertJsonPath('data.metadata.label', 'My Own Imprint');
+    }
+
+    public function test_only_an_admin_curates_the_label_list(): void
+    {
+        $this->actingAs($this->artist, 'api')->postJson('/api/admin/catalog/labels', ['code' => 'sneaky', 'name' => 'Sneaky'])->assertForbidden();
+        $this->assertDatabaseCount('catalog_labels', 0);
+    }
+
     private function metadata(): array
     {
         return [

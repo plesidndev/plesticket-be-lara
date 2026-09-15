@@ -4,6 +4,7 @@ namespace App\Repositories;
 
 use App\Models\CatalogDsp;
 use App\Models\CatalogGenre;
+use App\Models\CatalogLabel;
 use App\Models\CatalogLanguage;
 use App\Models\CatalogMasterEntry;
 use App\Models\CatalogTerritory;
@@ -47,6 +48,7 @@ class CatalogMasterDataRepository implements CatalogMasterDataRepositoryInterfac
         return match ($type) {
             'dsps' => CatalogDsp::class,
             'genres' => CatalogGenre::class,
+            'labels' => CatalogLabel::class,
             'languages' => CatalogLanguage::class,
             'territories' => CatalogTerritory::class,
             'timezones' => CatalogTimezone::class,

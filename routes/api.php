@@ -4,12 +4,10 @@ use App\Http\Controllers\Api\AdminCatalogController;
 use App\Http\Controllers\Api\AdminOperationsController;
 use App\Http\Controllers\Api\AdminOrderController;
 use App\Http\Controllers\Api\AdminSummaryController;
-use App\Http\Controllers\Api\AuditLogController;
-use App\Http\Controllers\Api\PayoutAccountController;
-use App\Http\Controllers\Api\PayoutController;
 use App\Http\Controllers\Api\AgentEventController;
 use App\Http\Controllers\Api\AgentOrderController;
 use App\Http\Controllers\Api\AgentSummaryController;
+use App\Http\Controllers\Api\AuditLogController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\BankController;
 use App\Http\Controllers\Api\CatalogController;
@@ -25,6 +23,8 @@ use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\OrganizerAuthController;
 use App\Http\Controllers\Api\OrganizerMemberController;
 use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\PayoutAccountController;
+use App\Http\Controllers\Api\PayoutController;
 use App\Http\Controllers\Api\PlesConnectAuthController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ProvinceController;
@@ -223,6 +223,10 @@ Route::middleware(['auth:api', 'eo'])->group(function () {
 Route::middleware(['auth:api', 'permission:console.access'])->prefix('admin')->group(function () {
     Route::get('/talents', [TalentController::class, 'adminIndex'])->middleware('permission:talents.view');
     Route::post('/talents/{id}/verify', [TalentController::class, 'verify'])->middleware('permission:talents.moderate');
+    // TalentService::update() already honours an admin caller, but the only route reaching it sits
+    // behind `eo`, which turns away any staff account that is not itself an event organizer. Admins
+    // get their own path rather than loosening that gate for every EO route it also protects.
+    Route::put('/talents/{id}', [TalentController::class, 'update'])->middleware('permission:talents.moderate');
     Route::get('/talent-categories', [TalentCategoryController::class, 'adminIndex'])->middleware('permission:talents.view');
     Route::post('/talent-categories', [TalentCategoryController::class, 'store'])->middleware('permission:talents.moderate');
     Route::patch('/talent-categories/{code}', [TalentCategoryController::class, 'update'])->where('code', '[a-z0-9_-]+')->middleware('permission:talents.moderate');
@@ -253,7 +257,7 @@ Route::middleware(['auth:organizer', 'role:MITRA_TICKET_BOX'])->prefix('agent')-
 // Catalog identity is independent of event organizer capabilities.
 Route::middleware(['auth:api', EnsureCatalogAccess::class])->prefix('catalog')->group(function () {
     Route::get('/options', [CatalogController::class, 'options']);
-    Route::get('/{masterType}', [CatalogMasterDataController::class, 'index'])->where('masterType', 'genres|languages|territories|timezones|dsps');
+    Route::get('/{masterType}', [CatalogMasterDataController::class, 'index'])->where('masterType', 'genres|labels|languages|territories|timezones|dsps');
     Route::get('/releases', [CatalogController::class, 'index']);
     Route::post('/releases', [CatalogController::class, 'store'])->middleware('throttle:catalog-create');
     Route::prefix('releases/{release}')->whereUuid('release')->group(function () {
@@ -285,8 +289,8 @@ Route::middleware(['auth:api', 'permission:catalog.view', EnsureCatalogAccess::c
 });
 
 Route::middleware(['auth:api', 'permission:catalog.view', EnsureCatalogAccess::class.':admin'])->prefix('admin/catalog')->group(function () {
-    Route::get('/{masterType}', [CatalogMasterDataController::class, 'adminIndex'])->where('masterType', 'genres|languages|territories|timezones|dsps');
+    Route::get('/{masterType}', [CatalogMasterDataController::class, 'adminIndex'])->where('masterType', 'genres|labels|languages|territories|timezones|dsps');
     Route::post('/dsps/{code}/logo', [CatalogMasterDataController::class, 'uploadDspLogo'])->where('code', '[a-z0-9_-]+')->middleware('permission:catalog_masters.manage');
-    Route::post('/{masterType}', [CatalogMasterDataController::class, 'store'])->where('masterType', 'genres|languages|territories|timezones|dsps')->middleware('permission:catalog_masters.manage');
-    Route::patch('/{masterType}/{code}', [CatalogMasterDataController::class, 'update'])->where('masterType', 'genres|languages|territories|timezones|dsps')->where('code', '.+')->middleware('permission:catalog_masters.manage');
+    Route::post('/{masterType}', [CatalogMasterDataController::class, 'store'])->where('masterType', 'genres|labels|languages|territories|timezones|dsps')->middleware('permission:catalog_masters.manage');
+    Route::patch('/{masterType}/{code}', [CatalogMasterDataController::class, 'update'])->where('masterType', 'genres|labels|languages|territories|timezones|dsps')->where('code', '.+')->middleware('permission:catalog_masters.manage');
 });

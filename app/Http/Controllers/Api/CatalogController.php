@@ -31,6 +31,7 @@ class CatalogController extends Controller
             'music_stores' => $masters->destinationCodes('music'), 'video_stores' => $masters->destinationCodes('music_video'),
             'dsps' => CatalogMasterDataResource::collection($masters->list('dsps')),
             'genres' => CatalogMasterDataResource::collection($masters->list('genres')),
+            'labels' => CatalogMasterDataResource::collection($masters->list('labels')),
             'languages' => CatalogMasterDataResource::collection($masters->list('languages')),
             'territories' => CatalogMasterDataResource::collection($masters->list('territories')),
             'timezones' => CatalogMasterDataResource::collection($masters->list('timezones')),
