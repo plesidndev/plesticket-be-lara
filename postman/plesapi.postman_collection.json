@@ -672,6 +672,55 @@
           ]
         },
         {
+          "name": "Ticket Types",
+          "item": [
+            {
+              "name": "Add Ticket Type",
+              "request": {
+                "method": "POST",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"name\": \"VIP\",\n  \"description\": \"Front standing, includes merch\",\n  \"price\": 250000,\n  \"quota\": 50,\n  \"is_active\": true,\n  \"sale_start\": \"2026-10-01 00:00:00\",\n  \"sale_end\": \"2026-12-20 09:00:00\"\n}"
+                },
+                "url": "{{base_url}}/events/{{event_id}}/ticket-types",
+                "description": "Owner only. Works on a verified, selling event \u2014 unlike Update Event, which refuses once verified and replaces the whole ticket_types set. Verification stays where it is and existing tiers keep their remaining quota. Returns 201 with the new tier's id."
+              }
+            },
+            {
+              "name": "Update Ticket Type",
+              "request": {
+                "method": "PUT",
+                "header": [
+                  {
+                    "key": "Content-Type",
+                    "value": "application/json"
+                  }
+                ],
+                "body": {
+                  "mode": "raw",
+                  "raw": "{\n  \"price\": 275000,\n  \"is_active\": false\n}"
+                },
+                "url": "{{base_url}}/events/{{event_id}}/ticket-types/{{ticket_type_id}}",
+                "description": "Send only what changed. quota accepts 0 here because it counts what is left, so setting it to 0 takes a tier off sale without deleting it. Half a sale window is checked against the half already stored."
+              }
+            },
+            {
+              "name": "Delete Ticket Type",
+              "request": {
+                "method": "DELETE",
+                "url": "{{base_url}}/events/{{event_id}}/ticket-types/{{ticket_type_id}}",
+                "description": "Refused with 422 once the tier has been ordered, because order lines reference it. Set is_active to false instead."
+              }
+            }
+          ]
+        },
+        {
           "name": "Staff & Agents",
           "item": [
             {
@@ -792,9 +841,10 @@
                 ],
                 "body": {
                   "mode": "raw",
-                  "raw": "{\n  \"name\": \"Postman Band\",\n  \"slug\": \"postman-band\",\n  \"type\": \"group\",\n  \"category\": \"band\",\n  \"genre\": \"Pop\",\n  \"bio\": \"Demo talent created from Postman.\",\n  \"origin_city\": \"Jakarta\",\n  \"contact_name\": \"Demo Manager\",\n  \"contact_phone\": \"081234567890\",\n  \"contact_email\": \"manager@example.com\",\n  \"instagram\": \"postmanband\"\n}"
+                  "raw": "{\n  \"name\": \"Postman Band\",\n  \"slug\": \"postman-band\",\n  \"type\": \"group\",\n  \"category\": \"band\",\n  \"genre\": \"Pop\",\n  \"bio\": \"Demo talent created from Postman.\",\n  \"origin_city\": \"Jakarta\",\n  \"contact_name\": \"Demo Manager\",\n  \"contact_phone\": \"081234567890\",\n  \"contact_email\": \"manager@example.com\",\n  \"instagram\": \"postmanband\",\n  \"single_url\": \"https://open.spotify.com/track/example\",\n  \"youtube_videos\": [\n    \"https://www.youtube.com/watch?v=dQw4w9WgXcQ\",\n    \"https://youtu.be/dQw4w9WgXcQ\"\n  ]\n}"
                 },
-                "url": "{{base_url}}/talents"
+                "url": "{{base_url}}/talents",
+                "description": "youtube_videos is replaced wholesale on update; send [] to clear it and omit the key to leave it alone."
               },
               "event": [
                 {

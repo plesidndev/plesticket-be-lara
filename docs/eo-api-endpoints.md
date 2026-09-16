@@ -28,6 +28,10 @@ Envelope is always `{status, message, data}`, plus `meta` on paginated lists and
 | PUT/POST | `/events/{id}` | update |
 | POST | `/events/{id}/banner` | upload banner (multipart) |
 | PATCH | `/events/{id}/toggle` | publish / unpublish |
+| **Ticket types** |||
+| POST | `/events/{eventId}/ticket-types` | add one tier |
+| PUT | `/events/{eventId}/ticket-types/{id}` | edit one tier |
+| DELETE | `/events/{eventId}/ticket-types/{id}` | remove a tier nobody has ordered |
 | **Staff & agents** |||
 | GET | `/events/{eventId}/members` | list staff |
 | POST | `/events/{eventId}/members` | add staff |
@@ -145,6 +149,57 @@ sending files, `PUT` for JSON.
 send it and whatever you send becomes the complete list. Never send a partial
 array — that silently deletes the rest.
 
+### Ticket types on an existing event
+
+`PUT /events/{id}` cannot help you here: it refuses outright once the event is
+verified, and its `ticket_types` key replaces the whole set. These three take one
+tier at a time and stay open on a **verified, selling** event, which is how an
+organizer opens a second wave or adds a VIP tier after doors are announced.
+
+```
+POST   /events/{eventId}/ticket-types
+PUT    /events/{eventId}/ticket-types/{ticketTypeId}
+DELETE /events/{eventId}/ticket-types/{ticketTypeId}
+```
+
+`{eventId}` takes either form the other event routes take — the UUID or the
+`EVT…` code. Owner only; somebody else's event answers 404 exactly as an unknown
+id does.
+
+```json
+{
+  "name": "VIP",
+  "description": "Front standing, includes merch",
+  "price": 250000,
+  "quota": 50,
+  "is_active": true,
+  "sale_start": "2026-10-01 00:00:00",
+  "sale_end": "2026-12-20 09:00:00"
+}
+```
+
+`name`, `price` and `quota` are required on create; only `name`, `price`,
+`quota`, `description`, `is_active`, `sale_start` and `sale_end` exist. Errors are
+keyed by the field itself (`quota`), not by an array index. Create returns 201
+with the new tier including its `id`; update returns 200; delete returns 200 with
+no `data`.
+
+**Verification does not move.** Adding a tier leaves the event verified and on
+sale — moderation is about the organizer and the event, not the price list, and
+bouncing a live event back to pending would stop checkout.
+
+**Existing tiers are never touched.** `quota` counts what is *left* — it falls as
+orders are placed and is restored when they expire — so a tier added mid-sale
+leaves every other tier's remaining stock exactly where it was.
+
+**A tier that has been ordered cannot be deleted** (422). Order lines reference
+it, so removing it would take the buyer's order with it; set `is_active: false`
+to take it off sale instead. `quota` may be updated to `0` for the same purpose,
+and unlike on create it accepts `0` because it means "none left" rather than "a
+tier with no stock".
+
+A rejected or suspended event refuses all three with 422.
+
 ### POST /events/{id}/banner
 
 `multipart/form-data`, field `banner`. jpg/jpeg/png/webp, **max 5 MB**.
@@ -230,8 +285,14 @@ Two different things:
 | `slug` `genre` `bio` (max 2000) `origin_city` | optional |
 | `contact_name` `contact_phone` `contact_email` | optional |
 | `instagram` `tiktok` `youtube` `spotify` | optional |
+| `single_url` | optional, a URL, max 200 — one link to the act's single |
+| `youtube_videos` | optional list, max 10, each an `https://` YouTube link (`youtube.com`, `youtu.be`, `www.`/`m.`) |
 
 Submissions start unverified; admin verifies them.
+
+`youtube_videos` is the act's own video box: the list is replaced wholesale by whatever an update
+sends, an empty array clears it, and omitting the key leaves it untouched. Order is kept as sent.
+Talent responses always carry it as a list, never null.
 
 ### POST /events/{eventId}/talents
 

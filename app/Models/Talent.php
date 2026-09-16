@@ -16,7 +16,7 @@ class Talent extends Model
     protected $fillable = [
         'name', 'slug', 'type', 'category', 'genre', 'photo', 'bio', 'origin_city',
         'contact_name', 'contact_phone', 'contact_email',
-        'instagram', 'tiktok', 'youtube', 'spotify',
+        'instagram', 'tiktok', 'youtube', 'spotify', 'single_url', 'youtube_videos',
         'is_verified', 'is_active', 'submitted_by', 'verified_by',
     ];
 
@@ -25,6 +25,7 @@ class Talent extends Model
         return [
             'is_verified' => 'boolean',
             'is_active' => 'boolean',
+            'youtube_videos' => 'array',
         ];
     }
 

@@ -31,6 +31,7 @@ use App\Http\Controllers\Api\ProvinceController;
 use App\Http\Controllers\Api\TalentCategoryController;
 use App\Http\Controllers\Api\TalentController;
 use App\Http\Controllers\Api\TicketController;
+use App\Http\Controllers\Api\TicketTypeController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\UserPermissionController;
 use App\Http\Controllers\Api\Webhook\XenditWebhookController;
@@ -172,6 +173,14 @@ Route::middleware(['auth:api', 'eo'])->prefix('events/{eventId}/members')->group
     Route::post('/', [OrganizerMemberController::class, 'store']);
     Route::put('/{memberId}', [OrganizerMemberController::class, 'update']);
     Route::delete('/{memberId}', [OrganizerMemberController::class, 'destroy']);
+});
+
+// Ticket types — scoped per event, owner only. Unlike PUT /events/{id} this stays open on a
+// verified event, so a tier can be added to something already on sale without a re-review.
+Route::middleware(['auth:api', 'eo'])->prefix('events/{eventId}/ticket-types')->group(function () {
+    Route::post('/', [TicketTypeController::class, 'store']);
+    Route::put('/{ticketTypeId}', [TicketTypeController::class, 'update']);
+    Route::delete('/{ticketTypeId}', [TicketTypeController::class, 'destroy']);
 });
 
 // EO agent sales tracking — scoped per event, owner only

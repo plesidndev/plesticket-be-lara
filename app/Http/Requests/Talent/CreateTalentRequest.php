@@ -28,6 +28,11 @@ class CreateTalentRequest extends FormRequest
             'tiktok'        => ['nullable', 'string', 'max:100'],
             'youtube'       => ['nullable', 'string', 'max:200'],
             'spotify'       => ['nullable', 'string', 'max:200'],
+            'single_url'    => ['nullable', 'url', 'max:200'],
+            'youtube_videos' => ['nullable', 'array', 'max:10'],
+            // Held to YouTube because the field is presented as the act's YouTube box; youtu.be
+            // and the m./www. hosts are the same links people paste from a phone or a browser.
+            'youtube_videos.*' => ['required', 'url', 'max:200', 'regex:/^https:\/\/(www\.|m\.)?(youtube\.com|youtu\.be)\//i'],
         ];
     }
 

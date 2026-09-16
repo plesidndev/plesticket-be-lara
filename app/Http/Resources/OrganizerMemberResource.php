@@ -12,6 +12,7 @@ class OrganizerMemberResource extends JsonResource
         return [
             'id'              => $this->id,
             'uid'             => $this->uid,
+            'event_id'        => $this->event_id,
             'name'            => $this->name,
             'email'           => $this->email,
             'role'            => $this->role->value,

@@ -27,6 +27,9 @@ class TalentResource extends JsonResource
             'tiktok'       => $this->tiktok,
             'youtube'      => $this->youtube,
             'spotify'      => $this->spotify,
+            'single_url'   => $this->single_url,
+            // Always a list, so a client never has to tell null from empty.
+            'youtube_videos' => $this->youtube_videos ?? [],
             'is_verified'  => $this->is_verified,
             'is_active'    => $this->is_active,
             'submitted_by' => $this->submitted_by,

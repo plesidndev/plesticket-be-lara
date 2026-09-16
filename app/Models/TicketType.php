@@ -38,4 +38,9 @@ class TicketType extends Model
     {
         return $this->hasMany(Ticket::class);
     }
+
+    public function orderItems(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(OrderItem::class);
+    }
 }
