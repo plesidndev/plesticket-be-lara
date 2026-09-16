@@ -56,6 +56,11 @@ return [
         'organizer' => [
             'driver' => 'jwt',
             'provider' => 'organizer_members',
+
+            // Crew scan gates for a whole event day. The global 60-minute
+            // JWT_TTL would sign a gate officer out mid-shift, so this guard
+            // mints longer-lived tokens (see OrganizerAuthService::login).
+            'ttl' => env('JWT_ORGANIZER_TTL', 720),
         ],
     ],
 

@@ -10,7 +10,16 @@ class OrganizerAuthService
 {
     public function login(string $uid, string $password): array
     {
-        $token = auth('organizer')->attempt([
+        // Scope the longer crew TTL to this guard so it never widens the
+        // platform `api` guard's tokens.
+        $guard = auth('organizer');
+        $ttl   = config('auth.guards.organizer.ttl');
+
+        if ($ttl !== null) {
+            $guard->setTTL((int) $ttl);
+        }
+
+        $token = $guard->attempt([
             'uid'      => $uid,
             'password' => $password,
         ]);
@@ -20,10 +29,10 @@ class OrganizerAuthService
         }
 
         /** @var OrganizerMember $member */
-        $member = auth('organizer')->user();
+        $member = $guard->user();
 
         if (! $member->is_active) {
-            auth('organizer')->logout();
+            $guard->logout();
             throw new AuthenticationException('This account is inactive.');
         }
 

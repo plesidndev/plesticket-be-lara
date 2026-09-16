@@ -249,9 +249,12 @@ Route::middleware(['auth:api', 'eo'])->prefix('events/{eventId}/talents')->group
     Route::delete('/{id}', [EventTalentController::class, 'destroy']);
 });
 
-// Tickets — lookup open to any auth (buyer or organizer), scan organizer only
+// Tickets — lookup open to any auth (buyer or organizer). Scanning marks a
+// ticket used, so it is limited to gate staff: BAND/MEDIA/SPONSOR are access
+// credentials and MITRA_TICKET_BOX sells through the agent portal below.
 Route::get('/tickets/{code}', [TicketController::class, 'show'])->middleware('auth:api');
-Route::post('/tickets/{code}/scan', [TicketController::class, 'scan'])->middleware('auth:organizer');
+Route::post('/tickets/{code}/scan', [TicketController::class, 'scan'])
+    ->middleware(['auth:organizer', 'role:GATE_OFFICER']);
 
 // Agent (Mitra Ticket Box) portal
 Route::middleware(['auth:organizer', 'role:MITRA_TICKET_BOX'])->prefix('agent')->group(function () {
