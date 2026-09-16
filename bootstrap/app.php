@@ -22,6 +22,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->alias([
             'role' => \App\Http\Middleware\RoleMiddleware::class,
             'eo'   => \App\Http\Middleware\EnsureIsOrganizer::class,
+            'organizer.active' => \App\Http\Middleware\EnsureActiveOrganizerMember::class,
             'permission' => \App\Http\Middleware\PermissionMiddleware::class,
         ]);
     })

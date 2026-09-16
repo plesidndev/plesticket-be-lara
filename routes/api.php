@@ -79,7 +79,9 @@ Route::prefix('organizer-auth')->group(function () {
     Route::post('/login', [OrganizerAuthController::class, 'login']);
 
     Route::middleware('auth:organizer')->group(function () {
-        Route::get('/me', [OrganizerAuthController::class, 'me']);
+        Route::get('/me', [OrganizerAuthController::class, 'me'])->middleware('organizer.active');
+        // Logout stays reachable while deactivated so the crew app can still
+        // invalidate its token server-side instead of leaving it live.
         Route::post('/logout', [OrganizerAuthController::class, 'logout']);
     });
 });
@@ -254,10 +256,10 @@ Route::middleware(['auth:api', 'eo'])->prefix('events/{eventId}/talents')->group
 // credentials and MITRA_TICKET_BOX sells through the agent portal below.
 Route::get('/tickets/{code}', [TicketController::class, 'show'])->middleware('auth:api');
 Route::post('/tickets/{code}/scan', [TicketController::class, 'scan'])
-    ->middleware(['auth:organizer', 'role:GATE_OFFICER']);
+    ->middleware(['auth:organizer', 'organizer.active', 'role:GATE_OFFICER']);
 
 // Agent (Mitra Ticket Box) portal
-Route::middleware(['auth:organizer', 'role:MITRA_TICKET_BOX'])->prefix('agent')->group(function () {
+Route::middleware(['auth:organizer', 'organizer.active', 'role:MITRA_TICKET_BOX'])->prefix('agent')->group(function () {
     Route::get('/event', [AgentEventController::class, 'show']);
     Route::get('/event/ticket-types', [AgentEventController::class, 'ticketTypes']);
     Route::get('/orders', [AgentOrderController::class, 'index']);
